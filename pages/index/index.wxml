@@ -1,7 +1,6 @@
 <view class="home-page">
   <view class="demo-banner">
-    本地演示：可保存文字笔记；下方另有固定课程样例。
-    不上传文件、不调用 AI、不同步。
+    当前版本：笔记和 TXT 资料保存在本机；文字笔记支持 AI 整理；暂不提供云端同步。下方部分课程内容为固定演示样例。
   </view>
 
   <view class="page-header">

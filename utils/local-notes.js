@@ -254,13 +254,16 @@ function saveNote(input) {
       notes.some(note => note.id === id)
     );
 
-    notes.unshift({
-      id: id,
-      title: title,
-      content: content,
-      updatedAt: Date.now(),
-      aiAnalysis: null
-    });
+    const now = Date.now();
+
+notes.unshift({
+  id: id,
+  title: title,
+  content: content,
+  updatedAt: now,
+  contentUpdatedAt: now,
+  aiAnalysis: null
+});
   }
 
   writeNotes(notes);

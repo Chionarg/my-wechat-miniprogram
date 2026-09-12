@@ -518,11 +518,13 @@ note.aiAnalysis.data.categories
         "point.explanation":
           updated.summary,
 
-        userModified: true,
+          userModified: true,
+          originType: "user-edited",
+          originText: "用户已修改",
 
-        editing: false,
-        draftTitle: "",
-        draftSummary: ""
+          editing: false,
+          draftTitle: "",
+          draftSummary: ""
       });
 
       wx.showToast({

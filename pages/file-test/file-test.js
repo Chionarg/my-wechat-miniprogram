@@ -94,6 +94,21 @@ Page({
             ? file.size
             : 0;
 
+            const tempPath =
+            typeof file.path === "string"
+              ? file.path
+              : (
+                  typeof file.tempFilePath ===
+                    "string"
+                    ? file.tempFilePath
+                    : ""
+                );
+
+          const extension =
+            this.getExtension(
+              fileName
+            );
+
             if (
               size <= 0 ||
               size > MAX_TXT_SIZE
@@ -123,21 +138,6 @@ Page({
             
               return;
             }
-
-        const tempPath =
-          typeof file.path === "string"
-            ? file.path
-            : (
-                typeof file.tempFilePath ===
-                  "string"
-                  ? file.tempFilePath
-                  : ""
-              );
-
-        const extension =
-          this.getExtension(
-            fileName
-          );
 
         if (extension !== "txt") {
           this.setData({
