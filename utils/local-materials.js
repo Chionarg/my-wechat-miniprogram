@@ -1,6 +1,172 @@
 const STORAGE_KEY =
   "study-notes-demo:local-materials:v1";
 
+  function validateProcessing(
+    processing
+  ) {
+    if (
+      processing === undefined ||
+      processing === null
+    ) {
+      return true;
+    }
+
+    if (
+      typeof processing !== "object" ||
+      processing.version !== 1 ||
+
+      !Array.isArray(
+        processing.sources
+      ) ||
+      !Array.isArray(
+        processing.chunks
+      )
+    ) {
+      return false;
+    }
+
+    const targetChars =
+    processing.targetChars === undefined
+      ? 2000
+      : processing.targetChars;
+
+  if (
+    !Number.isInteger(targetChars) ||
+    targetChars <= 0
+  ) {
+    return false;
+  }
+
+    const sources =
+      processing.sources;
+
+    const chunks =
+      processing.chunks;
+
+    if (!sources.length) {
+      return false;
+    }
+
+    for (
+      let index = 0;
+      index < sources.length;
+      index += 1
+    ) {
+      const source =
+        sources[index];
+
+      if (
+        !source ||
+        typeof source !== "object" ||
+        source.id !==
+          "P" + (index + 1) ||
+        typeof source.text !==
+          "string" ||
+        !source.text.trim()
+      ) {
+        return false;
+      }
+    }
+
+    if (!chunks.length) {
+      return false;
+    }
+
+    const sourceIds =
+      sources.map(
+        source => source.id
+      );
+
+    const chunkSourceIds = [];
+
+    for (
+      let index = 0;
+      index < chunks.length;
+      index += 1
+    ) {
+      const chunk =
+        chunks[index];
+
+      if (
+        !chunk ||
+        typeof chunk !== "object" ||
+        chunk.id !==
+          "chunk_" + (index + 1) ||
+        !Array.isArray(
+          chunk.sourceIds
+        ) ||
+        !chunk.sourceIds.length ||
+        typeof chunk.text !==
+          "string" ||
+        chunk.charCount !==
+          chunk.text.length ||
+        typeof chunk.oversized !==
+          "boolean"
+      ) {
+        return false;
+      }
+
+      const expectedTextParts = [];
+
+      for (
+        let sourceIndex = 0;
+        sourceIndex <
+          chunk.sourceIds.length;
+        sourceIndex += 1
+      ) {
+        const sourceId =
+          chunk.sourceIds[
+            sourceIndex
+          ];
+
+        const globalIndex =
+          chunkSourceIds.length;
+
+        if (
+          sourceId !==
+          sourceIds[globalIndex]
+        ) {
+          return false;
+        }
+
+        const source =
+          sources[globalIndex];
+
+        expectedTextParts.push(
+          "[" +
+          source.id +
+          "]\n" +
+          source.text
+        );
+
+        chunkSourceIds.push(
+          sourceId
+        );
+      }
+
+      const expectedText =
+        expectedTextParts.join(
+          "\n\n"
+        );
+
+      if (
+        chunk.text !== expectedText ||
+        chunk.oversized !==
+          (
+            chunk.charCount >
+            targetChars
+          )
+      ) {
+        return false;
+      }
+    }
+
+    return (
+      chunkSourceIds.length ===
+      sourceIds.length
+    );
+  }
+
 function validateMaterial(material) {
   return (
     material &&
@@ -27,6 +193,10 @@ function validateMaterial(material) {
       material.aiAnalysis === null ||
       material.aiAnalysis === undefined ||
       typeof material.aiAnalysis === "object"
+    ) &&
+
+    validateProcessing(
+      material.processing
     )
   );
 }
@@ -113,7 +283,8 @@ function createMaterialId() {
 
 function saveTxtMaterial(
   fileName,
-  content
+  content,
+  processing
 ) {
   const safeName =
     typeof fileName === "string"
@@ -151,6 +322,16 @@ function saveTxtMaterial(
     );
   }
 
+  if (
+    !validateProcessing(
+      processing
+    )
+  ) {
+    throw new Error(
+      "TXT 处理数据格式异常"
+    );
+  }
+
   const materials =
     readMaterials();
 
@@ -175,6 +356,11 @@ function saveTxtMaterial(
     // 保存读取后的文本副本，
     // 不保存微信临时路径。
     content: safeContent,
+
+    processing:
+  processing === undefined
+    ? null
+    : processing,
 
     importedAt: now,
     updatedAt: now,

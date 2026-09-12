@@ -1,6 +1,9 @@
 const localMaterials =
   require("../../utils/local-materials");
 
+  const textProcessing =
+  require("../../utils/text-processing.js");
+
 const MAX_TXT_SIZE =
   200 * 1024;
 
@@ -51,9 +54,9 @@ Page({
 
     this.setData({
       selecting: true,
-    
+
       savedMaterialId: "",
-    
+
       errorText: ""
     });
 
@@ -115,27 +118,27 @@ Page({
             ) {
               this.setData({
                 selected: false,
-            
+
                 fileName: fileName,
                 fileSize: size,
                 extension: extension,
-            
+
                 hasTempPath:
                   Boolean(tempPath),
-            
+
                 textLoaded: false,
                 textLength: 0,
                 textPreview: "",
-            
+
                 statusText:
                   "TXT 文件大小不符合测试范围",
-            
+
                 errorText:
                   "当前测试仅支持大于 0 且不超过 200 KB 的 TXT 文件。"
               });
-            
+
               this.selectedTempPath = "";
-            
+
               return;
             }
 
@@ -692,11 +695,43 @@ Page({
     });
 
     try {
+      const normalizedText =
+      textProcessing.normalizeText(
+        this.loadedText
+      );
+
+    const paragraphs =
+      textProcessing.splitIntoParagraphs(
+        normalizedText
+      );
+
+    const sources =
+      textProcessing.createSources(
+        paragraphs
+      );
+
+    const chunks =
+      textProcessing.createChunks(
+        sources
+      );
+
+      const processing = {
+        version: 1,
+
+        targetChars:
+          textProcessing
+            .DEFAULT_CHUNK_TARGET_CHARS,
+
+        sources: sources,
+        chunks: chunks
+      };
+
       const material =
         localMaterials
           .saveTxtMaterial(
             this.data.fileName,
-            this.loadedText
+            this.loadedText,
+            processing
           );
 
       this.setData({
