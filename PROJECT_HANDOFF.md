@@ -538,3 +538,1360 @@ TXT 尚未接入 AI 整理。
 - 资料修改后 AI 结果过期状态如何判断。
 
 在上述设计确定前，不应直接把完整 200 KB TXT 发送给现有 `analyzeNote`。
+
+---
+
+## 16. 后续完整开发路线图
+
+> 本章节定义当前稳定基线之后的长期开发方向，供后续 AI / 开发者接管项目使用。
+>
+> 后续开发必须以当前实际代码、Git 状态和已经完成的人工验证为事实来源。
+>
+> 禁止因为本路线图存在就一次性实现全部功能。必须逐阶段开发、验证和提交。
+
+### 16.1 当前稳定基线
+
+截至当前版本，已经实际验证：
+
+#### 文字笔记链路
+
+文字笔记
+→ 保存到本地
+→ AI 整理
+→ AI 结果保存到本地
+→ 首页显示「AI 已整理」
+→ 查看知识大纲
+→ 打开知识点
+→ 显示知识点解释
+→ P1 / P2 等原文出处
+→ 用户编辑知识点
+→ 保存修改
+→ 返回大纲仍保持用户修改状态
+
+该链路已在微信开发者工具中实际验证通过。
+
+当前实际使用的 AI Provider 为：
+
+DeepSeek
+
+但是 DeepSeek 只是当前已经验证可用的 Provider，不是产品永久绑定的架构。
+
+#### TXT 学习资料链路
+
+当前已经验证：
+
+TXT
+→ 选择文件
+→ 文件类型 / 大小检查
+→ UTF-8 正文读取
+→ 正文预览
+→ 保存到本机
+→ 首页资料列表
+→ 查看原文
+
+TXT 当前尚未进入 AI 整理。
+
+#### 当前尚未实现
+
+- TXT 资料 AI 整理
+- 长资料 Chunk 分析
+- Chunk 断点恢复
+- PDF 正式导入
+- DOCX 正式导入
+- 资料 AI 大纲
+- 资料知识点人工编辑完整闭环
+- 账号
+- 云同步
+- 云数据库
+- 全局搜索
+- 复习系统
+
+---
+
+### 16.2 AI Provider 架构原则
+
+当前已经实际验证可用的 AI Provider 为 DeepSeek。
+
+DeepSeek 是当前实现，不是永久绑定的产品架构。
+
+后续所有 AI 功能，包括：
+
+- 文字笔记知识整理
+- TXT 资料分析
+- PDF 资料分析
+- DOCX 资料分析
+- Chunk 知识抽取
+- Chunk 结果合并
+- 未来可能增加的其他 AI 任务
+
+都必须从架构上视为调用统一的 AI Provider，而不是直接依赖 DeepSeek。
+
+目标调用关系：
+
+业务功能
+→ AI Task / Prompt
+→ 统一 AI Provider 接口
+→ 当前 DeepSeek Provider
+→ Provider 响应标准化
+→ Validator
+→ 业务数据
+
+未来如果切换 OpenAI、Claude 或其他模型 / 服务商，应尽量只增加或替换 Provider 适配层，不修改：
+
+- 页面业务逻辑
+- Note 主体业务模型
+- Material 主体业务模型
+- categories
+- knowledgePoints
+- sourceIds
+- P1 / P2 原文引用机制
+- Outline 页面核心逻辑
+- Knowledge 页面核心逻辑
+
+Provider 层负责：
+
+- API endpoint
+- API Key
+- 模型名称
+- 请求参数
+- Provider 特有请求格式
+- Provider 特有响应格式
+- 转换为统一业务结果
+
+业务层负责：
+
+- 用户操作
+- 原文处理
+- Paragraph
+- Source
+- Chunk
+- AI Task 定义
+- Prompt 业务规则
+- AI 结果校验
+- sourceId 校验
+- 数据保存
+- 状态管理
+- 大纲和知识点展示
+
+任何 API Key、AppSecret、Token 不得写入小程序前端或 Git 仓库。
+
+当前阶段继续使用已经验证成功的 DeepSeek。
+
+不要为了 Provider 抽象立即重构已经稳定工作的 `analyzeNote`。
+
+Provider 抽象应该在资料 AI Pipeline 开发过程中逐步建立。
+
+等 Material AI 链路验证稳定以后，再决定是否把现有 Note AI 迁移到统一 Provider。
+
+---
+
+### 16.3 AI 标准业务 Schema 原则
+
+无论底层使用 DeepSeek、OpenAI、Claude 或其他 Provider，业务层最终接收到的知识结构必须保持统一。
+
+核心结构继续围绕：
+
+categories
+→ knowledgePoints
+→ sourceIds
+
+知识点至少保持：
+
+```json
+{
+  "id": "point_xxx",
+  "title": "知识点名称",
+  "summary": "知识点解释",
+  "sourceIds": ["P12", "P13"]
+}
+
+### 16.4 原文事实来源原则
+
+AI 结果属于派生数据，原文才是事实来源。
+
+任何 AI 生成的知识点都必须能够引用真实 sourceId。
+
+例如：
+
+{
+  "title": "引用必须初始化",
+  "sourceIds": ["P12", "P13"]
+}
+
+AI 不允许自己创造不存在的 sourceId。
+
+程序必须验证：
+
+- sourceId 是否存在
+- sourceId 是否属于当前资料
+- Chunk 分析时 sourceId 是否属于允许引用范围
+
+例如当前 Chunk 只包含：
+
+P20
+P21
+P22
+P23
+
+如果 AI 返回 P999，则必须判定结果无效，不能直接保存。
+
+
+### 16.5 用户编辑保护原则
+
+必须持续区分：
+
+- AI 整理
+- 用户已修改
+- 用户新增
+
+现有语义包括：
+
+originType = ai
+originType = user-edited
+originType = user-created
+
+用户人工修改的数据不能因为下一次 AI 运行被静默覆盖。
+
+未来重新整理资料时，需要明确处理 AI 原始结果与用户覆盖结果之间的关系。
+
+在没有设计好合并策略之前，不允许通过“重新 AI 整理”直接删除用户修改。
+
+
+---
+
+## 17. 阶段 2A：TXT 原文标准化、Source 与 Chunk
+
+这是下一阶段必须首先完成的开发任务。
+
+优先级：最高。
+
+本阶段禁止调用 AI。
+
+目的：
+
+先建立以后 TXT / PDF / DOCX 都能共用的资料处理基础。
+
+目标：
+
+TXT content
+→ normalizeText
+→ splitIntoParagraphs
+→ createSources
+→ createChunks
+
+例如：
+
+P1
+P2
+P3
+P4
+...
+P36
+
+组成：
+
+Chunk 1 → P1-P8
+Chunk 2 → P9-P17
+Chunk 3 → P18-P27
+Chunk 4 → P28-P36
+
+
+### 17.1 Source 规则
+
+sourceId 必须在整份资料中全局唯一。
+
+禁止：
+
+Chunk 1:
+P1 P2 P3
+
+Chunk 2:
+P1 P2 P3
+
+必须：
+
+Chunk 1:
+P1 P2 P3
+
+Chunk 2:
+P4 P5 P6
+
+这样 KnowledgePoint 中的：
+
+sourceIds = ["P5"]
+
+才能永久对应唯一原文。
+
+
+### 17.2 Paragraph 规则
+
+优先按照自然段落切分。
+
+需要：
+
+- 统一换行
+- 清理无意义空段
+- 保留段落顺序
+- 尽量保持原文文本
+- 不改变原文语义
+
+不能直接简单地每 N 个字符切正文。
+
+对于异常长的单段落，需要设计单独 fallback。
+
+
+### 17.3 Chunk 规则
+
+Chunk 按完整 Source / Paragraph 组合。
+
+单次 AI Chunk 的目标文本大小必须与“文件最大允许大小”分离。
+
+例如：
+
+TXT 最大允许 200KB
+
+不代表：
+
+AI 一次可以处理 200KB。
+
+初期建议单 Chunk 目标约 1500～3000 中文字符。
+
+实际值应定义成配置常量，不要散落到业务代码中。
+
+
+### 17.4 建议建立的纯函数
+
+建议逐步建立：
+
+normalizeText(text)
+
+splitIntoParagraphs(text)
+
+createSources(paragraphs)
+
+createChunks(sources, options)
+
+这些函数尽量不要直接依赖 wx.*。
+
+这样未来可以独立测试，也可以给 TXT / PDF / DOCX 共用。
+
+
+### 17.5 阶段 2A 验收
+
+本阶段禁止产生 AI 费用。
+
+至少使用多个不同 TXT 测试：
+
+- 短文本
+- 多段文本
+- 包含大量空行
+- 包含长段落
+- 接近当前 TXT 限制的文本
+
+必须验证：
+
+- 原文没有意外丢失
+- Source 顺序正确
+- sourceId 不重复
+- Chunk 不重复
+- Chunk 不漏 Source
+- Chunk 边界合理
+- 全局 P 编号连续、唯一
+- 不调用 DeepSeek
+- 不调用其他 AI Provider
+
+开发阶段可以增加调试显示，例如：
+
+原文字数：5230
+Source：37
+Chunk：4
+
+Chunk 1: P1-P9
+Chunk 2: P10-P18
+Chunk 3: P19-P27
+Chunk 4: P28-P37
+
+阶段 2A 验证成功以后：
+
+1. Git commit
+2. 更新 PROJECT_HANDOFF.md
+3. 再进入阶段 2B
+
+
+---
+
+## 18. 阶段 2B：AI Provider 最小抽象
+
+阶段 2A 完成后开始。
+
+此阶段目标不是大规模重构。
+
+目标是建立最小 Provider 边界，让新的 Material AI 不直接绑定 DeepSeek。
+
+当前 DeepSeek 调用继续可用。
+
+概念调用关系：
+
+Material AI
+→ AI Task
+→ Provider
+→ DeepSeek（当前）
+
+未来：
+
+Material AI
+→ AI Task
+→ Provider
+→ OpenAI / Claude / 其他 Provider
+
+必须保持统一输出 Schema。
+
+
+### 18.1 Provider 配置
+
+概念上允许：
+
+provider = deepseek
+model = 当前模型
+
+以后允许切换其他 Provider / Model。
+
+API Key 必须始终位于安全的云端环境。
+
+禁止：
+
+- 在小程序前端写 API Key
+- 把 API Key 提交到 Git
+- 把 AppSecret / Token 提交到 Git
+
+
+### 18.2 Prompt 与 Provider 解耦
+
+Knowledge Extraction 属于业务任务，而不是 DeepSeek 专用功能。
+
+目标逻辑：
+
+业务 Task
+→ Prompt Builder
+→ Provider
+
+不要把所有业务 Prompt 永久写死在 DeepSeek 请求实现内部。
+
+
+### 18.3 不立即迁移 Note
+
+现有 analyzeNote 已经实际验证可工作。
+
+阶段 2B 不应该为了架构统一而立即重写它。
+
+先让新的 Material AI 使用 Provider 边界。
+
+Material AI 稳定后，再评估 Note 是否迁移到统一 Provider。
+
+
+---
+
+## 19. 阶段 2C：短 TXT AI 整理 MVP
+
+初期不要直接处理 200KB TXT。
+
+建议首先限制为较短 TXT，例如约 6000 字，用来验证完整 AI Pipeline。
+
+目标：
+
+TXT
+→ Sources
+→ Chunks
+→ AI Provider
+→ 当前 DeepSeek
+→ Chunk 局部分析
+→ Validator
+→ 保存结果
+
+每个 Chunk 发送给 AI 时应明确包含真实 Source，例如：
+
+[P12] 第一段原文……
+[P13] 第二段原文……
+[P14] 第三段原文……
+
+AI 返回知识点只能引用允许的 sourceIds。
+
+例如：
+
+{
+  "categories": [
+    {
+      "name": "C++基础",
+      "knowledgePoints": [
+        {
+          "title": "引用初始化",
+          "summary": "……",
+          "sourceIds": ["P12", "P13"]
+        }
+      ]
+    }
+  ]
+}
+
+程序必须验证返回内容。
+
+任何不存在的 sourceId 都不能直接写入正式分析结果。
+
+
+---
+
+## 20. 阶段 2D：Chunk 结果 Merge
+
+多个 Chunk 会产生多个局部知识结构。
+
+例如：
+
+Chunk 1
+
+C++基础
+- 变量
+- 引用
+
+Chunk 2
+
+C++基础
+- 指针
+- const
+
+Chunk 3
+
+面向对象
+- 类
+- 继承
+
+最终需要形成：
+
+C++基础
+- 变量
+- 引用
+- 指针
+- const
+
+面向对象
+- 类
+- 继承
+
+第一版优先使用程序规则合并同名 Category。
+
+只有确实需要时，再使用 AI 做语义 Merge。
+
+Merge 阶段原则：
+
+- 不重新向模型发送整份原文
+- 优先读取已经产生的结构化局部结果
+- 不破坏任何 sourceIds
+- 不静默删除知识点
+- 不静默覆盖用户修改
+
+这样可以减少：
+
+- Token
+- AI 成本
+- 延迟
+- 超时
+- 上下文压力
+
+
+---
+
+## 21. 阶段 2E：资料 AI 状态模型
+
+资料 AI 需要逐渐支持明确状态：
+
+idle
+preparing
+analyzing
+paused
+failed
+completed
+outdated
+
+首页资料卡片未来可以显示：
+
+未整理
+
+AI 整理中
+
+整理暂停
+
+整理失败
+
+AI 已整理
+
+AI 结果待更新
+
+资料正文发生变化后，需要通过：
+
+material.updatedAt
+
+与：
+
+aiAnalysis.sourceUpdatedAt
+
+进行比较，判断 AI 结果是否过期。
+
+尽量参考已经验证成功的 Note 逻辑。
+
+不要重新创造完全不同的过期判断体系。
+
+
+---
+
+## 22. 阶段 2F：Chunk 断点恢复
+
+长资料必须支持断点恢复。
+
+例如：
+
+Chunk 1 completed
+Chunk 2 completed
+Chunk 3 completed
+Chunk 4 failed
+Chunk 5 pending
+Chunk 6 pending
+
+如果第 4 块失败：
+
+必须保留 Chunk 1～3 的成功结果。
+
+用户下一次选择“继续整理”时，应从 failed / pending 部分继续。
+
+禁止重新调用已经成功的 Chunk。
+
+建议 Chunk 状态逐渐包含：
+
+{
+  "id": "C4",
+  "sourceIds": ["P30", "P31", "P32"],
+  "status": "failed",
+  "attemptCount": 1,
+  "errorCode": "AI_PROVIDER_ERROR"
+}
+
+不要默认无限自动重试。
+
+AI 继续操作由用户主动触发。
+
+
+---
+
+## 23. 阶段 2G：AI 调用费用与请求保护
+
+长资料可能产生大量 AI 请求。
+
+开始整理之前应该告诉用户：
+
+本资料包含：
+
+37 个原文段落
+8 个分析分块
+
+预计需要约 8～9 次 AI 请求。
+
+由用户确认以后再开始。
+
+禁止：
+
+- 导入 TXT 后自动调用 AI
+- 打开资料自动调用 AI
+- 页面 onShow 自动调用 AI
+- AI 失败无限自动重试
+- App 启动后自动继续收费 API 请求
+
+原则：
+
+所有可能产生费用的 AI 操作必须由用户主动触发。
+
+
+---
+
+## 24. 阶段 2H：Material AI 大纲
+
+资料 AI 数据稳定后，优先接入现有：
+
+pages/outline
+
+不要复制一套完全独立的 Material Outline 页面。
+
+当前 Note：
+
+outline?mode=local&noteId=...
+
+未来建议支持：
+
+outline?mode=material&materialId=...
+
+页面根据 mode 选择数据来源。
+
+最终提供统一 View Model：
+
+categories
+knowledgePoints
+sourceIds
+
+资料大纲目标：
+
+- Category 展开 / 折叠
+- KnowledgePoint 展示
+- Source 标签
+- 用户编辑
+- 用户新增
+- 用户删除
+- 调整分类
+
+尽量沿用已经验证成功的 Note UX。
+
+
+---
+
+## 25. 阶段 2I：Material Knowledge 页面
+
+优先复用：
+
+pages/knowledge
+
+未来支持：
+
+knowledge?mode=material&materialId=...&pointId=...
+
+需要展示：
+
+- 标题
+- 核心解释
+- 来源状态
+- 原文出处
+
+来源状态继续使用：
+
+AI 整理
+用户已修改
+用户新增
+
+并支持：
+
+展开原文
+
+根据：
+
+sourceIds
+
+从 Material Sources 中找到真实原文。
+
+禁止根据 AI summary 伪造“原文”。
+
+
+---
+
+## 26. 阶段 2J：Material 人工编辑
+
+资料知识点需要逐步支持：
+
+- 编辑知识点名称
+- 编辑知识点解释
+- 调整所属 Category
+- 删除知识点
+- 新增 KnowledgePoint
+- 新增 Category
+
+用户新增知识点时必须选择真实 Source。
+
+继续使用已有语义：
+
+userEdit
+userCreated
+
+重新 AI 整理不能静默覆盖用户修改。
+
+
+---
+
+## 27. 阶段 2K：扩展到 200KB TXT
+
+只有短 TXT Pipeline 稳定以后才能扩大。
+
+至少测试：
+
+约 10KB
+约 50KB
+约 100KB
+接近 200KB
+
+重点关注：
+
+- Source 数量
+- Chunk 数量
+- AI 请求次数
+- AI 成本
+- 云函数执行时间
+- 前端请求生命周期
+- 本地 Storage
+- 中途中断
+- 断点恢复
+- Merge 性能
+
+文件允许 200KB 不意味着一次 AI 请求发送 200KB。
+
+
+---
+
+## 28. 阶段 3：资料存储架构升级
+
+当前：
+
+wx.setStorageSync
+
+适合现阶段原型。
+
+但未来大量资料可能遇到 Storage 容量问题。
+
+需要实际统计：
+
+- Notes
+- Material Metadata
+- Material Content
+- Sources
+- AI Analysis
+- Chunk State
+
+只有确认存在真实容量问题以后再升级。
+
+未来可以考虑：
+
+小型 Metadata
+→ wx Storage
+
+大型原文
+→ 本地文件系统
+
+AI Metadata
+→ wx Storage / 未来数据库
+
+不能因为“以后可能有问题”现在就过度重构。
+
+任何迁移必须兼容现有用户旧数据。
+
+
+---
+
+## 29. 阶段 4：PDF 支持
+
+前提：
+
+TXT Pipeline 已经稳定。
+
+PDF 层只负责完成：
+
+PDF
+→ extractText
+
+之后必须进入统一 Pipeline：
+
+normalize
+→ paragraph
+→ source
+→ chunk
+→ AI Provider
+→ merge
+→ outline
+→ knowledge
+
+第一版只支持具有文本层的 PDF。
+
+暂时不要优先处理扫描版 PDF / OCR。
+
+未来 Source 可以逐渐保留：
+
+{
+  "id": "P102",
+  "text": "……",
+  "page": 17
+}
+
+这样未来可以支持：
+
+KnowledgePoint
+→ Source
+→ PDF Page
+
+PDF 需要逐步处理：
+
+- 页眉
+- 页脚
+- 页码
+- 多栏排版
+- 异常换行
+
+
+---
+
+## 30. 阶段 5：DOCX 支持
+
+DOCX 层只负责：
+
+DOCX
+→ extractText
+
+后面继续进入统一 Pipeline。
+
+尽量保留：
+
+- paragraph
+- heading
+
+未来可以增加：
+
+headingPath
+
+帮助 AI 理解章节结构。
+
+第一版避免过度复杂。
+
+
+---
+
+## 31. 阶段 6：统一 Note / Material AI Core
+
+只有 Material AI Pipeline 已经稳定以后再做。
+
+目标：
+
+Note
+→ Common AI Core
+
+Material
+→ Common AI Core
+
+共享：
+
+- Source Schema
+- KnowledgePoint Schema
+- Category Schema
+- Validator
+- Provider
+- Prompt Tasks
+- origin state
+
+但是入口允许不同。
+
+Note：
+
+短文本，可能单次 AI。
+
+Material：
+
+长文本，多 Chunk，多次 AI。
+
+禁止在 Material 尚未验证以前重构已经稳定的 Note AI。
+
+
+---
+
+## 32. 阶段 7：全局搜索
+
+等 Note / Material 数据结构稳定以后增加。
+
+搜索范围：
+
+- 笔记标题
+- 资料标题
+- Category
+- KnowledgePoint title
+- summary
+- 原文
+
+第一版优先本地搜索。
+
+不要为了搜索立即引入云数据库。
+
+
+---
+
+## 33. 阶段 8：复习系统
+
+核心知识库稳定以后，再考虑：
+
+- 收藏知识点
+- 掌握程度
+- 最近复习
+- 待复习
+- 薄弱知识
+- 错题 / 问题记录
+
+不要在 Material Pipeline 尚未完成时提前扩张数据模型。
+
+
+---
+
+## 34. 阶段 9：账号与云同步
+
+属于后期能力。
+
+必须先设计：
+
+- 用户身份
+- 数据所有权
+- Notes 同步
+- Materials 同步
+- AI Results 同步
+- 用户修改同步
+- 离线数据
+- 冲突解决
+- 删除同步
+- 隐私
+
+禁止直接把：
+
+wx.setStorageSync
+
+简单替换成数据库。
+
+必须提供数据迁移与兼容方案。
+
+
+---
+
+## 35. 阶段 10：隐私与用户数据控制
+
+正式上线以前必须重新审计。
+
+UI 必须准确告诉用户：
+
+- 什么数据只保存在本地
+- 什么操作会发送数据给 AI Provider
+- 什么情况下不会上传
+- AI 结果保存在哪里
+- 删除资料会删除哪些内容
+- 是否存在云同步
+
+禁止出现：
+
+UI 声称“不上传”，但实际代码发送正文给第三方 AI。
+
+如果以后增加云同步或更换 AI Provider，相关说明必须同步更新。
+
+
+---
+
+## 36. 阶段 11：Demo / Test 清理
+
+只有真实功能稳定后再进行。
+
+当前已知存在：
+
+- 固定演示卡片
+- pages/logs
+- identityTest
+- networkTest
+- connectionTest
+- 部分死代码
+- 开发测试文案
+
+不要在核心功能开发过程中提前大规模删除。
+
+等：
+
+Note
++
+Material
++
+AI
++
+Outline
++
+Knowledge
+
+真实闭环稳定以后，再单独进行 Cleanup。
+
+Cleanup 必须单独 Git commit。
+
+
+---
+
+## 37. 阶段 12：测试体系
+
+当前主要依赖微信开发者工具人工验证。
+
+项目增长以后，优先给纯函数增加测试。
+
+重点测试：
+
+normalizeText
+
+splitIntoParagraphs
+
+createSources
+
+createChunks
+
+validateAiAnalysis
+
+validateSourceIds
+
+mergeChunkResults
+
+outdated calculation
+
+Storage schema validation
+
+尤其 Source / Chunk 算法必须可以脱离 wx API 测试。
+
+核心资料处理函数应尽量设计成纯 JavaScript。
+
+
+---
+
+## 38. 错误处理原则
+
+文件错误、Storage 错误和 AI 错误必须区分。
+
+逐步形成明确 errorCode，例如：
+
+INVALID_INPUT
+
+TEXT_TOO_LONG
+
+INVALID_FILE
+
+AI_TIMEOUT
+
+AI_PROVIDER_ERROR
+
+AI_INVALID_JSON
+
+AI_INVALID_SOURCE
+
+STORAGE_FULL
+
+MATERIAL_NOT_FOUND
+
+ANALYSIS_OUTDATED
+
+错误处理原则：
+
+- 给用户可理解的信息
+- 保留已经完成的数据
+- 不静默丢失原文
+- 不静默覆盖用户修改
+- 不无限重试收费 API
+- 不因为一个 Chunk 失败删除其他成功 Chunk
+
+
+---
+
+## 39. Git 开发规则
+
+后续任何 AI / 开发者开始任务前必须运行：
+
+git status
+
+确认工作区状态。
+
+一次只完成一个明确阶段。
+
+修改以后必须进行微信开发者工具实际验证。
+
+提交前执行：
+
+git diff --check
+
+git status
+
+git diff --stat
+
+禁止未经确认使用：
+
+git add .
+
+应该明确暂存：
+
+git add file1 file2 ...
+
+Commit 示例：
+
+feat: add material source chunking
+
+feat: add AI provider abstraction
+
+feat: add TXT AI analysis MVP
+
+feat: add resumable material analysis
+
+feat: connect material outline
+
+fix: ...
+
+docs: update handoff ...
+
+阶段完成并实际验证以后更新：
+
+PROJECT_HANDOFF.md
+
+
+---
+
+## 40. PROJECT_HANDOFF 更新规则
+
+PROJECT_HANDOFF.md 是 AI / 开发者长期交接文档。
+
+需要更新的时机：
+
+- 一个明确开发阶段完成
+- 核心架构发生变化
+- 重要功能实际验证通过
+- 发现新的重大限制
+- Provider 发生变化
+- 数据 Schema 发生变化
+- 下一阶段计划发生变化
+
+不需要每修改一个按钮都更新。
+
+文档必须明确区分：
+
+计划
+
+与：
+
+已经实际验证
+
+禁止把“代码看起来完成”记录成“已经验证完成”。
+
+
+---
+
+## 41. 后续 AI 接管强制规则
+
+新的 AI 对话必须首先：
+
+1. 完整阅读 PROJECT_HANDOFF.md
+2. 阅读当前实际代码
+3. 执行 git status
+4. 确认当前 branch
+5. 判断代码和文档是否一致
+6. 如果发生冲突，以当前实际代码和 Git 状态为事实来源
+7. 不要立即修改代码
+8. 先说明当前阶段
+9. 说明本阶段目标
+10. 说明预计修改文件
+11. 给出人工验证方法
+12. 等用户确认后开发
+
+禁止新 AI：
+
+- 从零重写项目
+- 推翻已验证 Note AI
+- 为 Material 复制完全独立的 Outline / Knowledge 系统
+- 把 DeepSeek 写死为永久架构
+- 把任何其他 Provider 写死为永久架构
+- 未确认就升级依赖
+- 未确认修改生产云配置
+- 把 API Key / AppSecret / Token 写入 Git
+- 未确认删除 Demo / Test
+- 使用 git add .
+- 未经运行验证就声称功能已经完成
+
+
+---
+
+## 42. 下一次开发的明确起点
+
+下一次正式开发任务：
+
+阶段 2A：
+
+TXT
+→ normalize
+→ paragraphs
+→ 全局 Sources（P1/P2/P3...）
+→ Chunks
+
+本阶段：
+
+- 不调用 DeepSeek
+- 不调用其他 AI Provider
+- 不产生 AI 费用
+- 不重构现有 Note AI
+- 不修改已经验证成功的 Note → AI → Outline → Knowledge 主链路
+
+首先只建立 Material 的文本处理基础。
+
+阶段 2A 验收重点：
+
+- 原文不丢失
+- sourceId 唯一
+- sourceId 顺序正确
+- Chunk 不漏 Source
+- Chunk 不重复 Source
+- Chunk 边界合理
+- 超长单段有明确处理策略
+
+开发完成后必须通过微信开发者工具实际测试。
+
+验证通过后：
+
+1. Git commit
+2. 更新 PROJECT_HANDOFF.md
+3. 然后进入阶段 2B：AI Provider 最小抽象
+4. 之后进入阶段 2C：短 TXT AI 整理 MVP
+
+
+---
+
+## 43. 长期架构核心约束
+
+无论未来增加多少功能，都必须尽量保持以下边界：
+
+文件格式层
+TXT / PDF / DOCX
+↓
+文本标准化层
+↓
+Source / Chunk 层
+↓
+AI Task 层
+↓
+AI Provider 层
+↓
+Validator
+↓
+统一业务 Schema
+↓
+Note / Material
+↓
+Outline / Knowledge
+
+其中：
+
+- 文件格式可以替换或增加
+- AI Provider 可以替换
+- AI Model 可以替换
+- UI 可以迭代
+
+但以下概念应长期保持稳定：
+
+- 原文是事实来源
+- Source 必须可以追溯
+- KnowledgePoint 必须引用真实 Source
+- AI 输出必须验证
+- Provider 不得决定业务数据结构
+- 用户修改不能被静默覆盖
+- 收费 AI 操作必须由用户主动触发
+- 长资料必须分块处理
+- 已完成 Chunk 不应因为后续失败而重复调用
+- Note 与 Material 应逐步共享核心能力，而不是形成两套互不兼容的系统
+
+当前 Provider：
+
+DeepSeek
+
+这只代表当前已经验证可用的实现。
+
+长期设计要求：
+
+未来更换 AI Provider 或 Model 时，应尽量只修改 Provider / 配置层，而不重做 TXT、PDF、DOCX、Source、Chunk、Outline 和 Knowledge 系统。
+
+这是后续架构演进时必须优先保持的核心原则。
