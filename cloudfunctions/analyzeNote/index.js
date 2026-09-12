@@ -1,11 +1,11 @@
 const cloud = require("wx-server-sdk");
-const https = require("https");
 
 cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 });
 
-const MODEL = "deepseek-flash";
+const deepSeekProvider =
+  require("./deepseek-provider");
 
 // 第一阶段只处理短文字笔记。
 // 这是测试限制，不是最终产品限制。
@@ -48,131 +48,55 @@ function buildSourceText(sources) {
     .join("\n\n");
 }
 
-function callDeepSeek(apiKey, sourceText) {
-  return new Promise((resolve, reject) => {
-    const requestBody = JSON.stringify({
-      model: MODEL,
+function buildMessages(
+  sourceText
+) {
+  return [
+    {
+      role: "system",
 
-      messages: [
-        {
-          role: "system",
-          content: [
-            "你是学习资料整理助手。",
-            "任务是把用户提供的学习笔记整理为知识结构。",
-            "只根据资料本身进行整理。",
-            "不要编造资料中不存在的出处。",
-            "不要进行事实纠错或额外知识拓展。",
-            "sourceIds 只能引用资料中实际出现的 P 编号。",
-            "同一个知识点可以引用多个真实来源段落。",
-            "解释应简短、清楚，避免重复。",
-            "只输出 JSON。"
-          ].join("\n")
-        },
+      content: [
+        "你是学习资料整理助手。",
+        "任务是把用户提供的学习笔记整理为知识结构。",
+        "只根据资料本身进行整理。",
+        "不要编造资料中不存在的出处。",
+        "不要进行事实纠错或额外知识拓展。",
+        "sourceIds 只能引用资料中实际出现的 P 编号。",
+        "同一个知识点可以引用多个真实来源段落。",
+        "解释应简短、清楚，避免重复。",
+        "只输出 JSON。"
+      ].join("\n")
+    },
 
-        {
-          role: "user",
-          content: [
-            "请整理下面的学习笔记。",
-            "",
-            "返回 JSON 的结构必须为：",
-            "{",
-            '  "categories": [',
-            "    {",
-            '      "name": "分类名称",',
-            '      "knowledgePoints": [',
-            "        {",
-            '          "title": "知识点名称",',
-            '          "summary": "简短解释",',
-            '          "sourceIds": ["P1"]',
-            "        }",
-            "      ]",
-            "    }",
-            "  ]",
-            "}",
-            "",
-            "不要输出 JSON 之外的文字。",
-            "",
-            "学习资料：",
-            sourceText
-          ].join("\n")
-        }
-      ],
+    {
+      role: "user",
 
-      response_format: {
-        type: "json_object"
-      },
-
-      max_tokens: 1000,
-
-      thinking: {
-        type: "disabled"
-      }
-    });
-
-    const request = https.request(
-      {
-        hostname: "api.deepseek.com",
-        path: "/chat/completions",
-        method: "POST",
-        timeout: 15000,
-
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Length": Buffer.byteLength(requestBody)
-        }
-      },
-
-      response => {
-        let body = "";
-
-        response.setEncoding("utf8");
-
-        response.on("data", chunk => {
-          body += chunk;
-
-          if (body.length > 120000) {
-            request.destroy(
-              new Error("MODEL_RESPONSE_TOO_LARGE")
-            );
-          }
-        });
-
-        response.on("end", () => {
-          if (
-            response.statusCode < 200 ||
-            response.statusCode >= 300
-          ) {
-            const error = new Error("MODEL_HTTP_ERROR");
-            error.statusCode = response.statusCode;
-            reject(error);
-            return;
-          }
-
-          try {
-            resolve(JSON.parse(body));
-          } catch (error) {
-            reject(
-              new Error("INVALID_API_RESPONSE")
-            );
-          }
-        });
-      }
-    );
-
-    request.on("timeout", () => {
-      request.destroy(
-        new Error("MODEL_TIMEOUT")
-      );
-    });
-
-    request.on("error", error => {
-      reject(error);
-    });
-
-    request.write(requestBody);
-    request.end();
-  });
+      content: [
+        "请整理下面的学习笔记。",
+        "",
+        "返回 JSON 的结构必须为：",
+        "{",
+        '  "categories": [',
+        "    {",
+        '      "name": "分类名称",',
+        '      "knowledgePoints": [',
+        "        {",
+        '          "title": "知识点名称",',
+        '          "summary": "简短解释",',
+        '          "sourceIds": ["P1"]',
+        "        }",
+        "      ]",
+        "    }",
+        "  ]",
+        "}",
+        "",
+        "不要输出 JSON 之外的文字。",
+        "",
+        "学习资料：",
+        sourceText
+      ].join("\n")
+    }
+  ];
 }
 
 function validateKnowledgeData(data, allowedSourceIds) {
@@ -323,17 +247,19 @@ exports.main = async (event, context) => {
   const sourceText = buildSourceText(sources);
 
   try {
-    const apiResponse = await callDeepSeek(
-      apiKey,
-      sourceText
-    );
+    const messages =
+  buildMessages(
+    sourceText
+  );
 
-    const content =
-      apiResponse &&
-      apiResponse.choices &&
-      apiResponse.choices[0] &&
-      apiResponse.choices[0].message &&
-      apiResponse.choices[0].message.content;
+const providerResult =
+  await deepSeekProvider.generate({
+    apiKey: apiKey,
+    messages: messages
+  });
+
+  const content =
+  providerResult.content;
 
     if (
       typeof content !== "string" ||
@@ -362,24 +288,18 @@ exports.main = async (event, context) => {
     return {
       ok: true,
 
-      model: MODEL,
+      provider:
+  providerResult.provider,
+
+model:
+  providerResult.model,
 
       data: knowledgeData,
 
       sources: sources,
 
-      usage: apiResponse.usage
-        ? {
-            promptTokens:
-              apiResponse.usage.prompt_tokens || 0,
-
-            completionTokens:
-              apiResponse.usage.completion_tokens || 0,
-
-            totalTokens:
-              apiResponse.usage.total_tokens || 0
-          }
-        : null
+      usage:
+  providerResult.usage
     };
   } catch (error) {
     console.error(
