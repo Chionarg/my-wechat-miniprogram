@@ -1,0 +1,74 @@
+page {
+  background-color: #f5f7fb;
+  color: #1f2937;
+}
+
+.material-page {
+  padding: 28rpx 32rpx 60rpx;
+}
+
+.notice {
+  padding: 20rpx 24rpx;
+  border-radius: 14rpx;
+  background-color: #fff7e6;
+  color: #8a5700;
+  font-size: 24rpx;
+  line-height: 1.8;
+}
+
+.header-card,
+.content-card {
+  margin-top: 24rpx;
+  padding: 26rpx;
+  border: 1rpx solid #e2e8f0;
+  border-radius: 16rpx;
+  background-color: #ffffff;
+}
+
+.file-name {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.file-type {
+  display: block;
+  margin-top: 10rpx;
+  color: #64748b;
+  font-size: 23rpx;
+}
+
+.section-title {
+  display: block;
+  font-size: 29rpx;
+  font-weight: 700;
+}
+
+.material-content {
+  display: block;
+  margin-top: 20rpx;
+  color: #334155;
+  font-family: Consolas, monospace;
+  font-size: 25rpx;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.footer {
+  display: block;
+  margin-top: 24rpx;
+  color: #8491a3;
+  font-size: 22rpx;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.error-card {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  border-radius: 14rpx;
+  background-color: #fff1f2;
+  color: #b42318;
+}

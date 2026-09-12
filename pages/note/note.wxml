@@ -1,0 +1,182 @@
+<view class="note-page">
+  <view class="notice">
+    本地演示：笔记只保存在当前设备，不上传、不调用 AI、不同步。
+    请勿输入私人或敏感资料。
+  </view>
+
+  <view
+  class="ai-outdated"
+  wx:if="{{aiOutdated && aiResult}}"
+>
+  ⚠ 原笔记正文在上次 AI 整理后发生过修改。
+  当前知识结构可能已经过期，请结合最新正文核对。
+  系统不会自动重新调用 AI。
+</view>
+
+  <block wx:if="{{ready}}">
+    <text class="page-title">
+      {{noteId ? '编辑文字笔记' : '新建文字笔记'}}
+    </text>
+
+    <text class="field-label">标题</text>
+    <input
+      class="title-input"
+      value="{{title}}"
+      bindinput="onTitleInput"
+      maxlength="60"
+      placeholder="例如：C++ 引用学习笔记"
+    />
+    <text class="counter">{{title.length}} / 60</text>
+
+    <text class="field-label">正文</text>
+    <textarea
+      class="content-input"
+      value="{{content}}"
+      bindinput="onContentInput"
+      maxlength="10000"
+      placeholder="输入或粘贴学习笔记，保留换行和缩进"
+    ></textarea>
+    <text class="counter">{{content.length}} / 10000</text>
+
+    <view class="status">
+      {{dirty ? '有未保存的修改' : statusText}}
+    </view>
+
+    <button
+      class="save-button"
+      bindtap="onSave"
+      loading="{{saving}}"
+      disabled="{{saving}}"
+    >
+      保存到本地
+    </button>
+
+    <view class="ai-area">
+      <text class="ai-title">AI 知识整理</text>
+
+      <text class="ai-description">
+        将当前已保存的笔记发送给第三方 AI 服务，
+        生成分类、知识点和原文段落引用。
+      </text>
+
+      <button
+        class="ai-button"
+        bindtap="onAnalyze"
+        loading="{{analyzing}}"
+        disabled="{{analyzing || saving}}"
+      >
+        {{analyzing ? '正在整理…' : '✨ AI 整理'}}
+      </button>
+
+      <text class="ai-warning">
+        开发测试：当前最多 2000 个字符，不自动重试。
+        请勿提交私人、敏感或无权处理的资料。
+      </text>
+    </view>
+
+    <view
+      class="ai-error"
+      wx:if="{{aiError}}"
+    >
+      {{aiError}}
+    </view>
+
+    <view
+      class="ai-result"
+      wx:if="{{aiResult}}"
+    >
+      <view class="result-heading">
+        <text class="result-title">
+          AI 整理结果
+        </text>
+
+        <text class="result-label">
+          未人工核对
+        </text>
+      </view>
+
+      <view
+        class="result-category"
+        wx:for="{{aiResult.data.categories}}"
+        wx:for-item="category"
+        wx:key="name"
+      >
+        <text class="category-name">
+          {{category.name}}
+        </text>
+
+        <view
+          class="result-point"
+          wx:for="{{category.knowledgePoints}}"
+          wx:for-item="point"
+          wx:key="title"
+        >
+          <text class="point-name">
+            {{point.title}}
+          </text>
+
+          <text class="point-summary">
+            {{point.summary}}
+          </text>
+
+          <text class="point-source">
+            出处编号：
+            {{point.sourceIds.join('、')}}
+          </text>
+        </view>
+      </view>
+
+      <view class="source-section">
+        <text class="category-name">
+          原文段落映射
+        </text>
+
+        <view
+          class="source-item"
+          wx:for="{{aiResult.sources}}"
+          wx:for-item="source"
+          wx:key="id"
+        >
+          <text class="source-id">
+            {{source.id}}
+          </text>
+
+          <text class="source-content">
+            {{source.content}}
+          </text>
+        </view>
+      </view>
+
+      <text
+        class="usage-text"
+        wx:if="{{aiResult.usage}}"
+      >
+        本次 Token：
+        {{aiResult.usage.totalTokens}}
+      </text>
+
+      <text class="result-note">
+        这是 AI 自动整理结果，不代表内容已经人工验证。
+        当前结果已与这份笔记一起保存在本地，
+        不会云端同步。
+      </text>
+    </view>
+
+    <button class="back-button" bindtap="onBackClick">
+      返回资料首页
+    </button>
+
+    <text class="footer">
+      本轮不自动保存。请先保存再离开。
+      上面的返回按钮会检查未保存修改；
+      系统返回键、顶部返回或直接关闭尚未接入退出保护。
+    </text>
+  </block>
+
+  <view wx:else class="error-card">
+    <text>{{errorText || '正在读取笔记……'}}</text>
+    <button class="back-button" bindtap="onBackClick">
+      返回
+    </button>
+  </view>
+</view>

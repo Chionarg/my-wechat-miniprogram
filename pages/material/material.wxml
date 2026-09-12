@@ -1,0 +1,43 @@
+<view class="material-page">
+  <view class="notice">
+    当前显示保存到本地的 TXT 文本副本。
+    不会因为打开本页而调用 AI。
+  </view>
+
+  <block wx:if="{{ready}}">
+    <view class="header-card">
+      <text class="file-name">
+        {{fileName}}
+      </text>
+
+      <text class="file-type">
+        {{typeText}}
+      </text>
+    </view>
+
+    <view class="content-card">
+      <text class="section-title">
+        原文
+      </text>
+
+      <text
+        class="material-content"
+        selectable
+      >
+        {{content}}
+      </text>
+    </view>
+
+    <text class="footer">
+      TXT 第一版保存的是读取后的文本副本，
+      不是微信临时文件本身。
+    </text>
+  </block>
+
+  <view
+    class="error-card"
+    wx:else
+  >
+    {{errorText || '无法读取资料'}}
+  </view>
+</view>

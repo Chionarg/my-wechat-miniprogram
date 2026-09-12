@@ -1,0 +1,145 @@
+<view class="outline-page">
+  <view
+    class="demo-banner"
+    wx:if="{{!isLocalAi}}"
+  >
+    固定演示大纲：未调用 AI。
+  </view>
+
+  <view
+    class="local-banner"
+    wx:if="{{isLocalAi}}"
+  >
+    真实 AI 整理结果 · 当前保存在本地 · 未人工核对
+  </view>
+
+  <view
+    class="outdated-banner"
+    wx:if="{{isLocalAi && aiOutdated}}"
+  >
+    ⚠ 原笔记正文在本次 AI 整理后发生过修改。
+    当前大纲可能已经过期，请结合最新原文核对。
+  </view>
+
+  <view class="document-header">
+    <text class="document-title">
+      {{title}}
+    </text>
+
+    <text class="document-meta">
+      {{subtitle}} · {{groups.length}} 个分类
+    </text>
+
+    <button
+      class="source-button"
+      bindtap="onViewSource"
+    >
+      {{isLocalAi ? '查看本次整理原文' : '查看原资料'}}
+    </button>
+  </view>
+
+  <view class="reading-tip">
+    点击分类展开或收起，点击知识点查看简短解释和对应原文。
+  </view>
+
+  <view
+    class="group-card"
+    wx:for="{{groups}}"
+    wx:for-item="group"
+    wx:key="id"
+  >
+    <button
+      class="group-toggle"
+      data-id="{{group.id}}"
+      bindtap="toggleGroup"
+    >
+      <text class="group-arrow">
+        {{group.expanded ? '▼' : '▶'}}
+      </text>
+
+      <text class="group-title">
+        {{group.title}}
+      </text>
+
+      <text class="group-count">
+        {{group.points.length}} 项
+      </text>
+    </button>
+
+    <view
+      class="point-list"
+      wx:if="{{group.expanded}}"
+    >
+      <button
+        class="point-button"
+        wx:for="{{group.points}}"
+        wx:for-item="point"
+        wx:key="id"
+
+        data-id="{{point.id}}"
+        data-title="{{point.title}}"
+        data-summary="{{point.summary}}"
+        data-sourceids="{{point.sourceIds}}"
+
+        bindtap="onPointTap"
+      >
+        <view class="point-content">
+          <text class="point-title">
+            {{point.title}}
+          </text>
+
+          <text
+            class="origin-tag origin-{{point.originType}}"
+            wx:if="{{isLocalAi}}"
+          >
+            {{point.originText}}
+          </text>
+
+          <text
+            class="point-summary"
+            wx:if="{{isLocalAi && point.summary}}"
+          >
+            {{point.summary}}
+          </text>
+
+          <view class="point-meta">
+            <text class="point-source">
+              {{isLocalAi ? '出处：' : ''}}{{point.source}}
+            </text>
+
+            <text
+              class="review-tag"
+              wx:if="{{point.review}}"
+            >
+              待核对
+            </text>
+          </view>
+        </view>
+
+        <text class="point-arrow">
+          ›
+        </text>
+      </button>
+    </view>
+  </view>
+
+  <button
+  class="add-category-button"
+  bindtap="onAddCategory"
+  wx:if="{{isLocalAi}}"
+>
+  ＋ 新增分类
+</button>
+
+  <button
+    class="add-button"
+    bindtap="onAddPoint"
+  >
+    ＋ 新增知识点
+  </button>
+
+  <view class="page-footer">
+    AI 整理结果可能存在遗漏或错误。
+    本页面通过出处编号连接到本次分析使用的原文段落。
+  </view>
+</view>

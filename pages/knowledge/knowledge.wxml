@@ -1,0 +1,226 @@
+<view class="knowledge-page">
+  <view
+    class="demo-banner"
+    wx:if="{{!isLocalAi}}"
+  >
+    固定演示知识点。
+  </view>
+
+  <view
+    class="local-ai-banner"
+    wx:if="{{isLocalAi}}"
+  >
+    真实 AI 整理结果 · 当前保存在本地 · 未人工核对
+  </view>
+
+  <view
+    class="outdated-notice"
+    wx:if="{{isLocalAi && aiOutdated}}"
+  >
+    ⚠ 原笔记正文在本次 AI 整理后已经修改。
+    当前知识点可能已过期，请结合最新正文核对。
+  </view>
+
+  <block wx:if="{{available}}">
+
+    <view
+  class="user-modified-notice"
+  wx:if="{{isLocalAi && userModified}}"
+>
+  用户已修改这个知识点的名称或解释。
+  原文出处仍保持上次 AI 整理时的来源，
+  不代表修改后的内容已经由原文重新验证。
+</view>
+
+<view
+  class="content-card edit-card"
+  wx:if="{{editing}}"
+>
+  <text class="section-title">
+    编辑知识点
+  </text>
+
+  <text class="field-label">
+    知识点名称
+  </text>
+
+  <input
+    class="knowledge-input"
+    value="{{draftTitle}}"
+    maxlength="100"
+    bindinput="onTitleInput"
+  />
+
+  <text class="field-label">
+    核心解释
+  </text>
+
+  <textarea
+    class="knowledge-textarea"
+    value="{{draftSummary}}"
+    maxlength="1000"
+    bindinput="onSummaryInput"
+  ></textarea>
+
+  <text class="edit-warning">
+    本次编辑不会修改 P1/P2/P3 原文出处，
+    也不会调用 AI。
+  </text>
+
+  <view class="edit-actions">
+    <button
+      class="cancel-edit-button"
+      bindtap="onCancelEdit"
+    >
+      取消
+    </button>
+
+    <button
+      class="save-edit-button"
+      bindtap="onSaveEdit"
+    >
+      保存修改
+    </button>
+  </view>
+</view>
+
+    <view class="heading">
+      <text class="point-title">
+        {{point.title}}
+      </text>
+
+      <text
+  class="origin-tag origin-{{originType}}"
+  wx:if="{{isLocalAi}}"
+>
+  {{originText}}
+</text>
+
+      <text class="category">
+        {{point.category}}
+      </text>
+    </view>
+
+    <view class="content-card">
+      <text class="section-title">
+        核心解释
+      </text>
+
+      <text class="body-text">
+        {{point.summary}}
+      </text>
+    </view>
+
+    <button
+      class="expand-button"
+      bindtap="toggleDetails"
+    >
+      {{expanded ? '收起详情 ↑' : '展开详情 ↓'}}
+    </button>
+
+    <view wx:if="{{expanded}}">
+      <view class="content-card">
+        <text class="section-title">
+          详细说明
+        </text>
+
+        <text class="body-text">
+          {{point.explanation}}
+        </text>
+
+        <text class="small-note">
+          当前 AI 输出只有简短解释，
+          因此本阶段详细说明与核心解释相同。
+          后续再设计独立详细解释字段。
+        </text>
+      </view>
+
+      <view class="content-card">
+        <text class="section-title">
+          原文出处
+        </text>
+
+        <view
+          class="source-box"
+          wx:for="{{matchedSources}}"
+          wx:key="id"
+        >
+          <text class="source-id">
+            {{item.id}}
+          </text>
+
+          <text
+            class="source-text"
+            selectable
+          >
+            {{item.content}}
+          </text>
+        </view>
+
+        <text
+          class="small-note"
+          wx:if="{{matchedSources.length === 0}}"
+        >
+          没有找到可核对的原文段落。
+        </text>
+      </view>
+
+      <view class="content-card">
+        <text class="section-title">
+          内容说明
+        </text>
+
+        <text class="small-note">
+          解释来自 AI 对资料的自动整理。
+          出处编号来自程序保存的原文段落映射。
+          存在出处不代表解释一定正确，请结合原文核对。
+        </text>
+      </view>
+    </view>
+
+    <button
+      class="edit-button"
+      bindtap="onEdit"
+      wx:if="{{!editing}}"
+    >
+      编辑知识点
+    </button>
+
+    <button
+  class="move-category-button"
+  bindtap="onMoveCategory"
+  wx:if="{{isLocalAi && !editing}}"
+>
+  调整所属分类
+</button>
+
+    <button
+  class="delete-point-button"
+  bindtap="onDeletePoint"
+  wx:if="{{isLocalAi && !editing}}"
+>
+  删除知识点
+</button>
+
+    <text class="footer-note">
+      当前没有调用新的 AI。
+      本页面只读取已经保存在本地的整理结果。
+    </text>
+  </block>
+
+  <view
+    wx:else
+    class="content-card unavailable"
+  >
+    <text class="section-title">
+      该知识点无法显示
+    </text>
+
+    <button
+      class="expand-button"
+      bindtap="onBack"
+    >
+      返回
+    </button>
+  </view>
+</view>

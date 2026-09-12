@@ -1,0 +1,282 @@
+page {
+  background-color: #f5f7fb;
+  color: #1f2937;
+}
+
+.note-page {
+  padding: 28rpx 32rpx 60rpx;
+}
+
+button::after {
+  border: none;
+}
+
+.notice {
+  padding: 20rpx 24rpx;
+  border-radius: 14rpx;
+  background-color: #fff7e6;
+  color: #8a5700;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.page-title {
+  display: block;
+  margin: 32rpx 0;
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.field-label {
+  display: block;
+  margin: 24rpx 0 14rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.title-input,
+.content-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid #cbd5e1;
+  border-radius: 14rpx;
+  background-color: #ffffff;
+  color: #1f2937;
+  font-size: 28rpx;
+}
+
+.title-input {
+  height: 92rpx;
+  padding: 0 22rpx;
+}
+
+.content-input {
+  height: 500rpx;
+  padding: 22rpx;
+  line-height: 1.8;
+}
+
+.counter {
+  display: block;
+  margin-top: 10rpx;
+  color: #8491a3;
+  font-size: 23rpx;
+  text-align: right;
+}
+
+.status {
+  margin: 24rpx 0;
+  color: #64748b;
+  font-size: 25rpx;
+}
+
+.save-button,
+.back-button {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 20rpx 0;
+  padding: 22rpx 16rpx;
+  border-radius: 14rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.save-button {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.back-button {
+  background-color: #eaf0ff;
+  color: #2454b8;
+}
+
+.footer {
+  display: block;
+  margin-top: 24rpx;
+  color: #8491a3;
+  font-size: 23rpx;
+  line-height: 1.8;
+}
+
+.error-card {
+  margin-top: 28rpx;
+  font-size: 28rpx;
+  line-height: 1.8;
+}
+
+.ai-area {
+  margin-top: 32rpx;
+  padding: 26rpx;
+  border: 1rpx solid #dbe7ff;
+  border-radius: 16rpx;
+  background-color: #ffffff;
+}
+
+.ai-title {
+  display: block;
+  color: #1f2937;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.ai-description {
+  display: block;
+  margin-top: 12rpx;
+  color: #64748b;
+  font-size: 24rpx;
+  line-height: 1.8;
+}
+
+.ai-button {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 22rpx 0 0;
+  padding: 22rpx 16rpx;
+  border-radius: 14rpx;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.ai-warning {
+  display: block;
+  margin-top: 16rpx;
+  color: #8a5700;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.ai-error {
+  margin-top: 22rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background-color: #fff1f2;
+  color: #b42318;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.ai-result {
+  margin-top: 26rpx;
+  padding: 26rpx;
+  border: 1rpx solid #dfe7f1;
+  border-radius: 16rpx;
+  background-color: #ffffff;
+}
+
+.result-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-title {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.result-label {
+  padding: 5rpx 12rpx;
+  border-radius: 8rpx;
+  background-color: #fff7e6;
+  color: #8a5700;
+  font-size: 21rpx;
+}
+
+.result-category {
+  margin-top: 26rpx;
+}
+
+.category-name {
+  display: block;
+  color: #1f2937;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.result-point {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background-color: #f8fafc;
+}
+
+.point-name {
+  display: block;
+  color: #334155;
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.point-summary {
+  display: block;
+  margin-top: 10rpx;
+  color: #475569;
+  font-size: 25rpx;
+  line-height: 1.8;
+}
+
+.point-source {
+  display: block;
+  margin-top: 12rpx;
+  color: #2563eb;
+  font-size: 22rpx;
+}
+
+.source-section {
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #e8edf4;
+}
+
+.source-item {
+  margin-top: 16rpx;
+  padding: 18rpx;
+  border-radius: 10rpx;
+  background-color: #f1f5f9;
+}
+
+.source-id {
+  display: block;
+  color: #2563eb;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.source-content {
+  display: block;
+  margin-top: 8rpx;
+  color: #475569;
+  font-size: 24rpx;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.usage-text {
+  display: block;
+  margin-top: 24rpx;
+  color: #64748b;
+  font-size: 22rpx;
+}
+
+.result-note {
+  display: block;
+  margin-top: 16rpx;
+  color: #8491a3;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.ai-outdated {
+  margin-bottom: 20rpx;
+  padding: 20rpx;
+  border-left: 6rpx solid #e5a534;
+  border-radius: 10rpx;
+  background-color: #fff7e6;
+  color: #8a5700;
+  font-size: 24rpx;
+  line-height: 1.8;
+}

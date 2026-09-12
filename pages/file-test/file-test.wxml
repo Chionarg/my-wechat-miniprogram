@@ -1,0 +1,168 @@
+<view class="file-page">
+  <view class="notice">
+    文件选择测试
+    当前只验证能否选择 TXT 文件。
+    不读取正文、不上传、不保存、不调用 AI。
+  </view>
+
+  <view class="support-card">
+    <text class="section-title">
+      当前测试范围
+    </text>
+
+    <text class="body-text">
+      支持：.txt
+    </text>
+
+    <text class="body-text">
+      PDF 和 DOCX 将在 TXT 流程验证完成后单独测试。
+    </text>
+  </view>
+
+  <button
+    class="choose-button"
+    bindtap="onChooseFile"
+    loading="{{selecting}}"
+    disabled="{{selecting}}"
+  >
+    {{selecting ? '正在选择…' : '选择 TXT 文件'}}
+  </button>
+
+  <view
+    class="error-card"
+    wx:if="{{errorText}}"
+  >
+    {{errorText}}
+  </view>
+
+  <view
+    class="result-card"
+    wx:if="{{fileName}}"
+  >
+    <text class="section-title">
+      文件信息
+    </text>
+
+    <view class="info-row">
+      <text class="info-label">
+        文件名
+      </text>
+
+      <text class="info-value">
+        {{fileName}}
+      </text>
+    </view>
+
+    <view class="info-row">
+      <text class="info-label">
+        大小
+      </text>
+
+      <text class="info-value">
+        {{fileSize}} 字节
+      </text>
+    </view>
+
+    <view class="info-row">
+      <text class="info-label">
+        扩展名
+      </text>
+
+      <text class="info-value">
+        {{extension}}
+      </text>
+    </view>
+
+    <view class="info-row">
+      <text class="info-label">
+        临时路径
+      </text>
+
+      <text class="info-value">
+        {{hasTempPath ? '已获得' : '未获得'}}
+      </text>
+    </view>
+
+    <view
+      class="status success"
+      wx:if="{{selected}}"
+    >
+      {{statusText}}
+    </view>
+
+    <view
+      class="status"
+      wx:else
+    >
+      {{statusText}}
+    </view>
+  </view>
+
+  <button
+  class="read-button"
+  bindtap="onReadTxt"
+  loading="{{reading}}"
+  disabled="{{!selected || reading}}"
+  wx:if="{{selected}}"
+>
+  {{reading ? '正在读取…' : '读取 TXT 正文'}}
+</button>
+
+<view
+  class="preview-card"
+  wx:if="{{textLoaded}}"
+>
+  <text class="section-title">
+    TXT 内容预览
+  </text>
+
+  <view class="preview-meta">
+    <text>
+      字符数：{{textLength}}
+    </text>
+
+    <text>
+      {{encodingStatus}}
+    </text>
+  </view>
+
+  <scroll-view
+    class="preview-scroll"
+    scroll-y
+  >
+    <text
+      class="preview-text"
+      selectable
+    >
+      {{textPreview}}
+    </text>
+  </scroll-view>
+
+  <view class="safe-note">
+    本次仅在当前页面读取和预览，
+    未上传云端，也未调用 AI。
+  </view>
+</view>
+
+<button
+  class="save-material-button"
+  bindtap="onSaveMaterial"
+  loading="{{savingMaterial}}"
+  disabled="{{
+    savingMaterial ||
+    !textLoaded ||
+    savedMaterialId
+  }}"
+  wx:if="{{textLoaded}}"
+>
+  {{
+    savedMaterialId
+      ? '已保存为本地资料'
+      : '保存为学习资料'
+  }}
+</button>
+
+  <view class="privacy-note">
+    本页面不会显示完整临时路径，也不会读取或上传所选文件。
+  </view>
+</view>

@@ -1,0 +1,184 @@
+page {
+  background-color: #f5f7fb;
+  color: #1f2937;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.home-page {
+  padding: 28rpx 32rpx 48rpx;
+}
+
+.demo-banner {
+  padding: 20rpx 24rpx;
+  background-color: #fff7e6;
+  border: 1rpx solid #ffe0a3;
+  border-radius: 16rpx;
+  color: #8a5700;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.page-header {
+  margin-top: 36rpx;
+  margin-bottom: 30rpx;
+}
+
+.page-title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 700;
+}
+
+.page-description {
+  display: block;
+  margin-top: 12rpx;
+  color: #6b7280;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.action-row {
+  display: flex;
+  margin-bottom: 40rpx;
+}
+
+.action-button {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 24rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.action-button + .action-button {
+  margin-left: 20rpx;
+}
+
+button::after {
+  border: none;
+}
+
+.primary-button {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.secondary-button {
+  background-color: #eaf0ff;
+  color: #2454b8;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.section-count {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.material-card {
+  margin-bottom: 24rpx;
+  padding: 28rpx;
+  border: 1rpx solid #e8edf4;
+  border-radius: 20rpx;
+  background-color: #ffffff;
+}
+
+.card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.file-type {
+  color: #64748b;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.status-tag {
+  padding: 7rpx 14rpx;
+  border-radius: 10rpx;
+  font-size: 22rpx;
+}
+
+.status-completed {
+  color: #166534;
+  background-color: #eaf8ee;
+}
+
+.status-draft {
+  color: #64748b;
+  background-color: #f1f5f9;
+}
+
+.status-processing {
+  color: #1d4ed8;
+  background-color: #eaf0ff;
+}
+
+.material-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.material-description {
+  display: block;
+  margin-top: 12rpx;
+  color: #6b7280;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eef2f6;
+}
+
+.detail-button,
+.more-button {
+  margin: 0;
+  padding: 12rpx 0;
+  background-color: transparent;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.detail-button {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.more-button {
+  padding-left: 24rpx;
+  padding-right: 8rpx;
+  color: #6b7280;
+}
+
+.page-footer {
+  padding: 8rpx 12rpx;
+  color: #8491a3;
+  font-size: 23rpx;
+  line-height: 1.7;
+  text-align: center;
+}

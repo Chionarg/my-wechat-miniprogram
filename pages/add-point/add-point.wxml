@@ -1,0 +1,103 @@
+<view class="add-page">
+  <view class="notice">
+    手动新增的知识点将明确标记为“用户新增”，
+    不会冒充 AI 从原文中提取的结果，也不会调用 AI。
+  </view>
+
+  <block wx:if="{{ready}}">
+    <text class="field-label">
+      所属分类
+    </text>
+
+    <picker
+      mode="selector"
+      range="{{categories}}"
+      value="{{categoryIndex}}"
+      bindchange="onCategoryChange"
+    >
+      <view class="picker-box">
+        {{categories[categoryIndex]}}
+        <text>⌄</text>
+      </view>
+    </picker>
+
+    <text class="field-label">
+      知识点名称
+    </text>
+
+    <input
+      class="title-input"
+      value="{{title}}"
+      maxlength="100"
+      bindinput="onTitleInput"
+      placeholder="请输入知识点名称"
+    />
+
+    <text class="field-label">
+      核心解释
+    </text>
+
+    <textarea
+      class="summary-input"
+      value="{{summary}}"
+      maxlength="1000"
+      bindinput="onSummaryInput"
+      placeholder="请输入对这个知识点的解释"
+    ></textarea>
+
+    <text class="field-label">
+      关联原文
+    </text>
+
+    <text class="source-help">
+      至少选择一个真实存在的原文段落。
+    </text>
+
+    <checkbox-group
+      bindchange="onSourceChange"
+    >
+      <label
+        class="source-card"
+        wx:for="{{sources}}"
+        wx:key="id"
+      >
+        <checkbox
+          value="{{item.id}}"
+          checked="{{item.selected}}"
+          color="#2563eb"
+        />
+
+        <view class="source-content">
+          <text class="source-id">
+            {{item.id}}
+          </text>
+
+          <text class="source-text">
+            {{item.content}}
+          </text>
+        </view>
+      </label>
+    </checkbox-group>
+
+    <button
+      class="save-button"
+      bindtap="onSave"
+      loading="{{saving}}"
+      disabled="{{saving}}"
+    >
+      保存新增知识点
+    </button>
+
+    <text class="footer">
+      本操作只修改当前设备的本地数据，
+      不调用 DeepSeek。
+    </text>
+  </block>
+
+  <view
+    wx:else
+    class="error-card"
+  >
+    {{errorText || '无法读取数据'}}
+  </view>
+</view>

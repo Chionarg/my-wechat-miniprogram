@@ -1,0 +1,216 @@
+<view class="home-page">
+  <view class="demo-banner">
+    本地演示：可保存文字笔记；下方另有固定课程样例。
+    不上传文件、不调用 AI、不同步。
+  </view>
+
+  <view class="page-header">
+    <text class="page-title">我的学习资料</text>
+    <text class="page-description">
+      把零散笔记，整理成清晰的知识结构
+    </text>
+  </view>
+
+  <view class="action-row">
+    <button class="action-button secondary-button" bindtap="onNewNote">
+      ＋ 新建笔记
+    </button>
+
+    <button class="action-button primary-button" bindtap="onUpload">
+      上传资料
+    </button>
+  </view>
+
+  <view class="section-header">
+    <text class="section-title">我的本地笔记</text>
+    <text class="section-count">{{localNotes.length}} 份</text>
+  </view>
+
+  <view wx:if="{{notesError}}" class="demo-banner">
+    {{notesError}}
+  </view>
+
+  <view wx:elif="{{localNotes.length === 0}}" class="material-card">
+    <text class="material-description">
+      还没有本地笔记，点击上方“新建笔记”开始。
+    </text>
+  </view>
+
+  <view
+    wx:for="{{localNotes}}"
+    wx:key="id"
+    class="material-card"
+  >
+    <view class="card-heading">
+      <text class="file-type">文字笔记</text>
+      <text
+  class="status-tag status-completed"
+  wx:if="{{item.hasAi && !item.aiOutdated}}"
+>
+  AI 已整理
+</text>
+
+<text
+  class="status-tag status-processing"
+  wx:elif="{{item.hasAi && item.aiOutdated}}"
+>
+  AI 结果待更新
+</text>
+
+<text
+  class="status-tag status-draft"
+  wx:else
+>
+  仅本地 · 未分析
+</text>
+    </view>
+
+    <text class="material-title">{{item.title}}</text>
+    <text class="material-description">{{item.preview}}</text>
+
+    <view class="card-footer">
+      <button
+        class="detail-button"
+        data-id="{{item.id}}"
+        bindtap="onOpenLocalNote"
+      >
+        打开笔记
+      </button>
+
+      <button
+        class="detail-button"
+        wx:if="{{item.hasAi}}"
+        data-id="{{item.id}}"
+        bindtap="onOpenAiOutline"
+      >
+        查看大纲
+      </button>
+
+      <button
+        class="more-button"
+        data-id="{{item.id}}"
+        bindtap="onDeleteLocalNote"
+      >
+        删除
+      </button>
+    </view>
+  </view>
+
+  <view class="section-header">
+  <text class="section-title">
+    我的导入资料
+  </text>
+
+  <text class="section-count">
+    {{localMaterials.length}} 份
+  </text>
+</view>
+
+<view
+  class="demo-banner"
+  wx:if="{{materialsError}}"
+>
+  {{materialsError}}
+</view>
+
+<view
+  class="material-card"
+  wx:elif="{{
+    localMaterials.length === 0
+  }}"
+>
+  <text class="material-description">
+    还没有保存的导入资料。
+    点击上方“上传资料”选择 TXT。
+  </text>
+</view>
+
+<view
+  class="material-card"
+  wx:for="{{localMaterials}}"
+  wx:key="id"
+>
+  <view class="card-heading">
+    <text class="file-type">
+      {{item.typeText}}
+    </text>
+
+    <text
+      class="status-tag status-draft"
+      wx:if="{{!item.hasAi}}"
+    >
+      仅本地 · 未分析
+    </text>
+  </view>
+
+  <text class="material-title">
+    {{item.fileName}}
+  </text>
+
+  <text class="material-description">
+    {{item.preview}}
+  </text>
+
+  <view class="card-footer">
+    <button
+      class="detail-button"
+      data-id="{{item.id}}"
+      bindtap="onOpenLocalMaterial"
+    >
+      查看原文
+    </button>
+
+    <button
+      class="more-button"
+      data-id="{{item.id}}"
+      bindtap="onDeleteLocalMaterial"
+    >
+      删除
+    </button>
+  </view>
+</view>
+
+  <view class="section-header">
+    <text class="section-title">固定演示资料</text>
+    <text class="section-count">{{materials.length}} 份演示资料</text>
+  </view>
+
+  <view
+    class="material-card"
+    wx:for="{{materials}}"
+    wx:key="id"
+  >
+    <view class="card-heading">
+      <text class="file-type">{{item.type}}</text>
+      <text class="status-tag status-{{item.status}}">
+        {{item.statusText}}
+      </text>
+    </view>
+
+    <text class="material-title">{{item.title}}</text>
+    <text class="material-description">{{item.description}}</text>
+
+    <view class="card-footer">
+      <button
+        class="detail-button"
+        data-id="{{item.id}}"
+        bindtap="onOpenMaterial"
+      >
+        {{item.actionText}}
+      </button>
+
+      <button
+        class="more-button"
+        data-id="{{item.id}}"
+        bindtap="onMore"
+      >
+        更多
+      </button>
+    </view>
+  </view>
+
+  <view class="page-footer">
+    新建笔记仅保存在当前设备，尚未进行 AI 分析。
+    固定课程样例不代表实际分析结果。
+  </view>
+</view>
