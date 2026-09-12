@@ -135,8 +135,15 @@
     </text>
 
     <text
+      class="status-tag status-completed"
+      wx:if="{{item.hasAi}}"
+    >
+      AI 已整理
+    </text>
+
+    <text
       class="status-tag status-draft"
-      wx:if="{{!item.hasAi}}"
+      wx:else
     >
       仅本地 · 未分析
     </text>

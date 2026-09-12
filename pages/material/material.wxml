@@ -17,6 +17,35 @@
 
     <view class="content-card">
       <text class="section-title">
+        AI 整理
+      </text>
+
+      <text wx:if="{{hasAi}}">
+        AI 已整理。
+        当前版本暂不直接重新整理已有结果。
+      </text>
+
+      <button
+        wx:elif="{{aiAvailable}}"
+        bindtap="onAnalyzeTxt"
+        loading="{{aiSubmitting}}"
+        disabled="{{aiSubmitting}}"
+      >
+        {{
+          aiSubmitting
+            ? 'AI 整理中…'
+            : 'AI 整理'
+        }}
+      </button>
+
+      <text wx:else>
+        当前 TXT 暂不支持 AI 整理。
+        第一版仅支持单 Chunk、非超长 TXT。
+      </text>
+    </view>
+
+    <view class="content-card">
+      <text class="section-title">
         原文
       </text>
 
