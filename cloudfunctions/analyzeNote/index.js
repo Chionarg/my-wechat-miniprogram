@@ -17,6 +17,11 @@ const MAX_INPUT_LENGTH = 2000;
 // 防止一次请求切出过多段落。
 const MAX_SOURCE_COUNT = 30;
 
+// 2C 短 TXT MVP 的云端绝对输入上限。
+// targetChars 来自客户端 processing，
+// 不能把它本身当作安全边界。
+const MAX_TXT_CHUNK_LENGTH = 3000;
+
 function normalizeText(text) {
   return text
     .replace(/\r\n/g, "\n")
@@ -49,6 +54,177 @@ function buildSourceText(sources) {
   return sources
     .map(source => `[${source.id}]\n${source.content}`)
     .join("\n\n");
+}
+
+function validateTxtProcessing(
+  processing
+) {
+  if (
+    !processing ||
+    typeof processing !== "object" ||
+    processing.version !== 1 ||
+    !Array.isArray(
+      processing.sources
+    ) ||
+    !Array.isArray(
+      processing.chunks
+    )
+  ) {
+    throw new Error(
+      "INVALID_TXT_PROCESSING"
+    );
+  }
+
+  const targetChars =
+    processing.targetChars ===
+      undefined
+      ? 2000
+      : processing.targetChars;
+
+  if (
+    !Number.isInteger(targetChars) ||
+    targetChars <= 0
+  ) {
+    throw new Error(
+      "INVALID_TXT_PROCESSING"
+    );
+  }
+
+  const sources =
+    processing.sources;
+
+  const chunks =
+    processing.chunks;
+
+  if (
+    sources.length === 0 ||
+    sources.length >
+      MAX_SOURCE_COUNT
+  ) {
+    throw new Error(
+      "INVALID_TXT_SOURCES"
+    );
+  }
+
+  for (
+    let index = 0;
+    index < sources.length;
+    index += 1
+  ) {
+    const source =
+      sources[index];
+
+    if (
+      !source ||
+      typeof source !== "object" ||
+      source.id !==
+        "P" + (index + 1) ||
+      typeof source.text !==
+        "string" ||
+      !source.text.trim()
+    ) {
+      throw new Error(
+        "INVALID_TXT_SOURCES"
+      );
+    }
+  }
+
+  // 2C 第一版只允许单 Chunk。
+  if (chunks.length !== 1) {
+    throw new Error(
+      "TXT_MULTIPLE_CHUNKS_NOT_SUPPORTED"
+    );
+  }
+
+  const chunk =
+    chunks[0];
+
+  if (
+    !chunk ||
+    typeof chunk !== "object" ||
+    chunk.id !== "chunk_1" ||
+    !Array.isArray(
+      chunk.sourceIds
+    ) ||
+    chunk.sourceIds.length !==
+      sources.length ||
+    typeof chunk.text !==
+      "string" ||
+    typeof chunk.oversized !==
+      "boolean"
+  ) {
+    throw new Error(
+      "INVALID_TXT_CHUNK"
+    );
+  }
+
+  const expectedSourceIds =
+    sources.map(
+      source => source.id
+    );
+
+  for (
+    let index = 0;
+    index <
+      expectedSourceIds.length;
+    index += 1
+  ) {
+    if (
+      chunk.sourceIds[index] !==
+        expectedSourceIds[index]
+    ) {
+      throw new Error(
+        "INVALID_TXT_CHUNK"
+      );
+    }
+  }
+
+  const expectedText =
+    sources
+      .map(
+        source =>
+          "[" +
+          source.id +
+          "]\n" +
+          source.text
+      )
+      .join("\n\n");
+
+  if (
+    chunk.text !== expectedText ||
+    chunk.charCount !==
+      chunk.text.length ||
+    chunk.oversized !==
+      (
+        chunk.charCount >
+        targetChars
+      )
+  ) {
+    throw new Error(
+      "INVALID_TXT_CHUNK"
+    );
+  }
+
+  if (
+    chunk.charCount >
+      MAX_TXT_CHUNK_LENGTH
+  ) {
+    throw new Error(
+      "TXT_CHUNK_TOO_LARGE"
+    );
+  }
+
+  if (chunk.oversized) {
+    throw new Error(
+      "TXT_OVERSIZED_NOT_SUPPORTED"
+    );
+  }
+
+  return {
+    sources: sources,
+    chunk: chunk,
+    targetChars: targetChars
+  };
 }
 
 function validateKnowledgeData(data, allowedSourceIds) {
@@ -157,46 +333,105 @@ exports.main = async (event, context) => {
   }
 
   if (
-    !event ||
-    typeof event.text !== "string"
+    event &&
+    event.inputType !== undefined &&
+    event.inputType !== "note" &&
+    event.inputType !== "txt"
   ) {
     return {
       ok: false,
-      errorCode: "INVALID_INPUT",
-      message: "没有收到有效的文字笔记"
-    };
-  }
-
-  const text = normalizeText(event.text);
-
-  if (
-    !text ||
-    text.length > MAX_INPUT_LENGTH
-  ) {
-    return {
-      ok: false,
-      errorCode: "INVALID_INPUT_LENGTH",
-      message: `当前测试仅支持 1～${MAX_INPUT_LENGTH} 个字符`
+      errorCode:
+        "UNSUPPORTED_INPUT_TYPE",
+      message:
+        "暂不支持这种 AI 整理输入类型"
     };
   }
 
   let sources;
+  let sourceText;
 
-  try {
-    sources = createSources(text);
-  } catch (error) {
-    return {
-      ok: false,
-      errorCode: error.message,
-      message: "无法生成有效的原文段落"
-    };
+  if (
+    event &&
+    event.inputType === "txt"
+  ) {
+    let txtInput;
+
+    try {
+      txtInput =
+        validateTxtProcessing(
+          event.processing
+        );
+    } catch (error) {
+      return {
+        ok: false,
+        errorCode: error.message,
+        message:
+          "TXT 处理数据无效或暂不支持当前 TXT"
+      };
+    }
+
+    // TXT 的 Source 已经由客户端 2A 建立。
+    // 此处禁止重新 createSources。
+    sources =
+      txtInput.sources;
+
+    // 使用已经验证过、且与真实 Sources
+    // 严格一致的单 Chunk 文本。
+    sourceText =
+      txtInput.chunk.text;
+  } else {
+    // 保持原 Note 链路。
+    if (
+      !event ||
+      typeof event.text !== "string"
+    ) {
+      return {
+        ok: false,
+        errorCode: "INVALID_INPUT",
+        message:
+          "没有收到有效的文字笔记"
+      };
+    }
+
+    const text =
+      normalizeText(event.text);
+
+    if (
+      !text ||
+      text.length >
+        MAX_INPUT_LENGTH
+    ) {
+      return {
+        ok: false,
+        errorCode:
+          "INVALID_INPUT_LENGTH",
+        message:
+          `当前测试仅支持 1～${MAX_INPUT_LENGTH} 个字符`
+      };
+    }
+
+    try {
+      sources =
+        createSources(text);
+    } catch (error) {
+      return {
+        ok: false,
+        errorCode: error.message,
+        message:
+          "无法生成有效的原文段落"
+      };
+    }
+
+    sourceText =
+      buildSourceText(sources);
   }
 
-  const allowedSourceIds = new Set(
-    sources.map(source => source.id)
-  );
-
-  const sourceText = buildSourceText(sources);
+  const allowedSourceIds =
+    new Set(
+      sources.map(
+        source => source.id
+      )
+    );
 
   try {
     const messages =
