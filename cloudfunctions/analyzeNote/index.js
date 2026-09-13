@@ -296,29 +296,35 @@ exports.main = async (event, context) => {
     };
   }
 
+  const enablePublicAi = process.env.ENABLE_PUBLIC_AI === "true";
   const testOpenId = process.env.AI_TEST_OPENID;
 
-  if (!testOpenId) {
-    return {
-      ok: false,
-      errorCode: "MISSING_TEST_WHITELIST",
-      message: "AI 测试白名单尚未配置"
-    };
-  }
+  if (!enablePublicAi) {
+    if (!testOpenId) {
+      return {
+        ok: false,
+        errorCode: "MISSING_TEST_WHITELIST",
+        message: "AI 测试白名单尚未配置"
+      };
+    }
 
-  if (wxContext.OPENID !== testOpenId) {
-    return {
-      ok: false,
-      errorCode: "AI_TEST_NOT_ALLOWED",
-      message: "当前账号暂未开放 AI 测试"
-    };
+    if (wxContext.OPENID !== testOpenId) {
+      return {
+        ok: false,
+        errorCode: "AI_TEST_NOT_ALLOWED",
+        message: "当前账号暂未开放 AI 测试"
+      };
+    }
   }
 
   if (event && event.checkWhitelistOnly === true) {
     return {
       ok: true,
       whitelistMatched: true,
-      message: "白名单匹配成功，未调用模型"
+      publicAiEnabled: enablePublicAi,
+      message: enablePublicAi
+        ? "全量 AI 已开启，未调用模型"
+        : "白名单匹配成功，未调用模型"
     };
   }
 
