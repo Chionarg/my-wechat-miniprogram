@@ -1,10 +1,14 @@
 const localNotes =
   require("../../utils/local-notes");
+const localMaterials =
+  require("../../utils/local-materials");
 
 Page({
   data: {
     ready: false,
 
+    entityType: "note",
+    materialId: "",
     noteId: "",
 
     categories: [],
@@ -20,6 +24,58 @@ Page({
   },
 
   onLoad(options) {
+    if (options.type === "txt" && options.materialId) {
+      const materialId = options.materialId;
+
+      try {
+        const materials = localMaterials.readMaterials();
+
+        const material = materials.find(
+          item => item.id === materialId
+        );
+
+        if (
+          !material ||
+          !material.aiAnalysis ||
+          !material.aiAnalysis.data ||
+          !Array.isArray(material.aiAnalysis.data.categories) ||
+          !Array.isArray(material.aiAnalysis.sources)
+        ) {
+          throw new Error("没有可编辑的知识结构");
+        }
+
+        const categories = material.aiAnalysis.data.categories
+          .map(item => item.name)
+          .filter(Boolean);
+
+        if (categories.length === 0) {
+          throw new Error("当前没有可选择的分类");
+        }
+
+        const sources = material.aiAnalysis.sources.map(
+          source => ({
+            id: source.id,
+            content: source.text || source.content || "",
+            selected: false
+          })
+        );
+
+        this.setData({
+          ready: true,
+          entityType: "txt",
+          materialId: materialId,
+          categories: categories,
+          categoryIndex: 0,
+          sources: sources
+        });
+      } catch (error) {
+        console.error("加载 TXT 新增知识点页面失败：", error);
+        this.setData({ errorText: error.message });
+      }
+
+      return;
+    }
+
     const noteId =
       options.noteId || "";
 
@@ -208,20 +264,27 @@ Page({
     });
 
     try {
-      localNotes.addAiKnowledgePoint(
-        this.data.noteId,
-        {
-          categoryName:
-            categoryName,
-
-          title: title,
-
-          summary: summary,
-
-          sourceIds:
-            sourceIds
-        }
-      );
+      if (this.data.entityType === "txt") {
+        localMaterials.addMaterialKnowledgePoint(
+          this.data.materialId,
+          {
+            categoryName: categoryName,
+            title: title,
+            summary: summary,
+            sourceIds: sourceIds
+          }
+        );
+      } else {
+        localNotes.addAiKnowledgePoint(
+          this.data.noteId,
+          {
+            categoryName: categoryName,
+            title: title,
+            summary: summary,
+            sourceIds: sourceIds
+          }
+        );
+      }
 
       wx.showToast({
         title: "知识点已新增",

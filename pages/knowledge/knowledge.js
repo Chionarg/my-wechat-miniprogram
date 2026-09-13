@@ -39,29 +39,27 @@ Page({
   },
 
   onLoad(options) {
-    if (
-      options.mode === "local" &&
-      options.type === "txt" &&
-      options.materialId &&
-      options.pointId
-    ) {
+    const mode = options && options.mode;
+    const type = options && options.type;
+    const materialId = options && options.materialId;
+    const noteId = options && options.noteId;
+    const pointId = options && options.pointId;
+
+    if (mode === "local" && type === "txt" && materialId && pointId) {
+      this.loadLocalPointForTxt(materialId, pointId);
       return;
     }
 
-    if (
-      options.mode === "local" &&
-      options.noteId &&
-      options.pointId
-    ) {
+    if (mode === "local" && noteId && pointId) {
+      this.loadLocalPoint(noteId, pointId);
       return;
     }
 
-    if (options.id === "auto") {
+    if (options && options.id === "auto") {
       this.loadDemoAuto();
       return;
     }
 
-    console.warn("【未命中任何可用分支】", options);
     this.setData({
       available: false
     });
@@ -262,25 +260,31 @@ note.aiAnalysis.data.categories
       let targetCategory = "";
 
       material.aiAnalysis.data.categories
-      .forEach((category, cIdx) => {
-        const points =
-          Array.isArray(
-            category.knowledgePoints
-          )
-            ? category.knowledgePoints
-            : [];
+        .forEach((category, cIdx) => {
+          const points =
+            Array.isArray(
+              category.knowledgePoints
+            )
+              ? category.knowledgePoints
+              : [];
 
-        points.forEach((point, pIdx) => {
-          const pid = point.id || ("kp_" + cIdx + "_" + pIdx);
-          if (pid === pointId) {
-            if (!point.id) {
-              point.id = pid;
+          points.forEach((point, pIdx) => {
+            const pid =
+              point.id ||
+              ("kp_" + cIdx + "_" + pIdx);
+
+            if (
+              pid === pointId ||
+              point.id === pointId
+            ) {
+              if (!point.id) {
+                point.id = pid;
+              }
+              targetPoint = point;
+              targetCategory = category.name;
             }
-            targetPoint = point;
-            targetCategory = category.name;
-          }
+          });
         });
-      });
 
       if (!targetPoint) {
         throw new Error(
@@ -289,9 +293,7 @@ note.aiAnalysis.data.categories
       }
 
       const sourceIds =
-        Array.isArray(
-          targetPoint.sourceIds
-        )
+        Array.isArray(targetPoint.sourceIds)
           ? targetPoint.sourceIds
           : [];
 
@@ -300,14 +302,18 @@ note.aiAnalysis.data.categories
           material.aiAnalysis.sources
         )
           ? material.aiAnalysis.sources
-          : [];
+          : (
+              material.processing &&
+              Array.isArray(
+                material.processing.sources
+              )
+                ? material.processing.sources
+                : []
+            );
 
       const matchedSources = rawSources
-        .filter(
-          source =>
-            sourceIds.includes(
-              source.id
-            )
+        .filter(source =>
+          sourceIds.includes(source.id)
         )
         .map(source => ({
           ...source,
@@ -316,6 +322,17 @@ note.aiAnalysis.data.categories
             source.content ||
             ""
         }));
+
+      const isUserCreated = Boolean(
+        targetPoint.userCreated &&
+        targetPoint.userCreated.created
+      );
+
+      const isUserEdited = Boolean(
+        targetPoint.userEdit &&
+        targetPoint.userEdit.modified
+      );
+
       this.setData({
         mode: "local",
         entityType: "txt",
@@ -327,15 +344,12 @@ note.aiAnalysis.data.categories
         isLocalAi: true,
 
         userModified:
-          Boolean(
-            targetPoint.userEdit &&
-            targetPoint.userEdit.modified
-          ),
+          isUserEdited || isUserCreated,
 
         aiOutdated: false,
 
         point: {
-          title: targetPoint.title,
+          title: targetPoint.title || "",
           category: targetCategory,
           summary:
             targetPoint.summary || "",
@@ -344,38 +358,27 @@ note.aiAnalysis.data.categories
           sourceIds: sourceIds
         },
 
-        originType:
-          targetPoint.userCreated &&
-          targetPoint.userCreated.created
-            ? "user-created"
-            : (
-                targetPoint.userEdit &&
-                targetPoint.userEdit.modified
-                  ? "user-edited"
-                  : "ai"
-              ),
-
-        originText:
-          targetPoint.userCreated &&
-          targetPoint.userCreated.created
-            ? "用户新增"
-            : (
-                targetPoint.userEdit &&
-                targetPoint.userEdit.modified
-                  ? "用户已修改"
-                  : "AI 整理"
-              ),
-
-        categories:
-          material.aiAnalysis.data
-            .categories
-            .map(
-              category =>
-                category.name
+        originType: isUserCreated
+          ? "user-created"
+          : (
+              isUserEdited
+                ? "user-edited"
+                : "ai"
             ),
 
-        matchedSources:
-          matchedSources
+        originText: isUserCreated
+          ? "用户新增"
+          : (
+              isUserEdited
+                ? "用户已修改"
+                : "AI 整理"
+            ),
+
+        categories:
+          material.aiAnalysis.data.categories
+            .map(category => category.name),
+
+        matchedSources: matchedSources
       });
     } catch (error) {
       console.error(

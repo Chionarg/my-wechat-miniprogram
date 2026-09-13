@@ -775,10 +775,7 @@ Page({
   },
 
   onAddPoint() {
-    if (
-      !this.data.isLocalAi ||
-      !this.data.noteId
-    ) {
+    if (!this.data.isLocalAi) {
       wx.showModal({
         title: "暂未接入",
         content:
@@ -786,6 +783,51 @@ Page({
         showCancel: false
       });
 
+      return;
+    }
+
+    if (this.data.entityType === "txt") {
+      const materialId = this.data.materialId;
+
+      if (!materialId) {
+        wx.showModal({
+          title: "无法新增",
+          content: "缺少资料编号。",
+          showCancel: false
+        });
+        return;
+      }
+
+      wx.navigateTo({
+        url:
+          "/pages/add-point/add-point" +
+          "?type=txt" +
+          "&materialId=" +
+          encodeURIComponent(materialId),
+
+        fail: (error) => {
+          console.error(
+            "打开新增知识点页面失败：",
+            error
+          );
+
+          wx.showModal({
+            title: "打开失败",
+            content: "无法打开新增知识点页面。",
+            showCancel: false
+          });
+        }
+      });
+
+      return;
+    }
+
+    if (!this.data.noteId) {
+      wx.showModal({
+        title: "无法新增",
+        content: "缺少笔记编号。",
+        showCancel: false
+      });
       return;
     }
 

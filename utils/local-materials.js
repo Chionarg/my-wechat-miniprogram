@@ -951,6 +951,116 @@ function addMaterialCategory(
   return { success: true, name: name };
 }
 
+function addMaterialKnowledgePoint(materialId, input) {
+  if (
+    typeof materialId !== "string" ||
+    !materialId
+  ) {
+    throw new Error(
+      "缺少有效的资料编号"
+    );
+  }
+
+  const categoryName =
+    typeof input.categoryName === "string"
+      ? input.categoryName.trim()
+      : "";
+
+  const title =
+    typeof input.title === "string"
+      ? input.title.trim()
+      : "";
+
+  const summary =
+    typeof input.summary === "string"
+      ? input.summary.trim()
+      : "";
+
+  const sourceIds = Array.isArray(input.sourceIds)
+    ? input.sourceIds.filter(Boolean)
+    : [];
+
+  if (!categoryName || !title || !summary) {
+    throw new Error(
+      "请选择分类，并填写知识点名称和解释"
+    );
+  }
+
+  if (title.length > 100 || summary.length > 1000) {
+    throw new Error(
+      "名称最多 100 字符，解释最多 1000 字符"
+    );
+  }
+
+  if (sourceIds.length === 0) {
+    throw new Error(
+      "用户新增知识点至少需要关联一个现有原文段落"
+    );
+  }
+
+  const materials = readMaterials();
+
+  const material = materials.find(
+    item => item.id === materialId
+  );
+
+  if (
+    !material ||
+    !material.aiAnalysis ||
+    !material.aiAnalysis.data ||
+    !Array.isArray(material.aiAnalysis.data.categories)
+  ) {
+    throw new Error(
+      "没有找到对应资料或 AI 整理结果"
+    );
+  }
+
+  const category = material.aiAnalysis.data.categories.find(
+    c => c.name === categoryName
+  );
+
+  if (!category) {
+    throw new Error("找不到目标分类");
+  }
+
+  const allowedSources = new Set(
+    (material.processing && material.processing.sources
+      ? material.processing.sources
+      : material.aiAnalysis.sources || []
+    ).map(s => s.id)
+  );
+
+  const invalidSource = sourceIds.find(id => !allowedSources.has(id));
+  if (invalidSource) {
+    throw new Error("关联了不存在的原文段落: " + invalidSource);
+  }
+
+  if (!Array.isArray(category.knowledgePoints)) {
+    category.knowledgePoints = [];
+  }
+
+  const now = Date.now();
+  const pointId = "user_kp_" + now + "_" + Math.random().toString(36).substring(2, 7);
+
+  const newPoint = {
+    id: pointId,
+    title: title,
+    summary: summary,
+    sourceIds: sourceIds,
+    userCreated: {
+      created: true,
+      createdAt: now
+    }
+  };
+
+  category.knowledgePoints.push(newPoint);
+  material.updatedAt = now;
+
+  writeMaterials(materials);
+
+  return newPoint;
+}
+
 module.exports = {
   readMaterials,
   saveTxtMaterial,
@@ -959,5 +1069,6 @@ module.exports = {
   updateMaterialKnowledgePointById,
   moveMaterialKnowledgePointById,
   deleteMaterialKnowledgePointById,
-  addMaterialCategory
+  addMaterialCategory,
+  addMaterialKnowledgePoint
 };
