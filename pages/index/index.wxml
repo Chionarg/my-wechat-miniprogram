@@ -167,6 +167,15 @@
     </button>
 
     <button
+      class="detail-button"
+      wx:if="{{item.hasAi}}"
+      data-id="{{item.id}}"
+      bindtap="onOpenMaterialOutline"
+    >
+      查看大纲
+    </button>
+
+    <button
       class="more-button"
       data-id="{{item.id}}"
       bindtap="onDeleteLocalMaterial"

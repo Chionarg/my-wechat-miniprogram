@@ -1,10 +1,17 @@
 const localNotes =
   require("../../utils/local-notes");
 
+const localNotes =
+  require("../../utils/local-notes");
+const localMaterials =
+  require("../../utils/local-materials");
+
 Page({
   data: {
     mode: "demo",
+    entityType: "note",
     noteId: "",
+    materialId: "",
 
     title: "C++ 基础",
 
@@ -129,12 +136,25 @@ Page({
   onLoad(options) {
     if (
       options.mode === "local" &&
+      options.type === "txt" &&
+      options.materialId
+    ) {
+      this.entityType = "txt";
+      this.localMaterialId = options.materialId;
+
+      this.loadLocalAiOutlineForTxt(
+        options.materialId
+      );
+
+      return;
+    }
+
+    if (
+      options.mode === "local" &&
       options.noteId
     ) {
-      // 保存到页面实例中。
-      // 这是运行时变量，不显示在页面上。
-      this.localNoteId =
-        options.noteId;
+      this.entityType = "note";
+      this.localNoteId = options.noteId;
 
       this.loadLocalAiOutline(
         options.noteId
@@ -150,10 +170,17 @@ Page({
   },
 
   onShow() {
-    // 第一次进入页面时，
-    // onLoad 已经负责加载。
-    // 从知识点详情返回后，
-    // onShow 会再次执行，因此重新读取最新数据。
+    if (
+      this.entityType === "txt" &&
+      this.localMaterialId &&
+      this.hasLoadedLocalOutline
+    ) {
+      this.loadLocalAiOutlineForTxt(
+        this.localMaterialId
+      );
+      return;
+    }
+
     if (
       this.localNoteId &&
       this.hasLoadedLocalOutline
@@ -312,6 +339,145 @@ Page({
     }
   },
 
+  loadLocalAiOutlineForTxt(materialId) {
+    try {
+      const materials =
+        localMaterials.readMaterials();
+
+      const material = materials.find(
+        item => item.id === materialId
+      );
+
+      if (!material) {
+        throw new Error(
+          "没有找到对应的 TXT 资料"
+        );
+      }
+
+      if (
+        !material.aiAnalysis ||
+        !material.aiAnalysis.data ||
+        !Array.isArray(
+          material.aiAnalysis.data.categories
+        )
+      ) {
+        throw new Error(
+          "这份资料还没有可用的 AI 整理结果"
+        );
+      }
+
+      const aiAnalysis =
+        material.aiAnalysis;
+
+      const groups =
+        aiAnalysis.data.categories.map(
+          (category, categoryIndex) => ({
+            id:
+              "ai-category-" +
+              categoryIndex,
+
+            title: category.name,
+
+            expanded:
+              categoryIndex === 0,
+
+              points:
+              (category.knowledgePoints || []).map(
+                (point, pointIndex) => ({
+                  id: point.id || ("kp_" + categoryIndex + "_" + pointIndex),
+
+                  title: point.title,
+
+                  summary:
+                    point.summary || "",
+
+                  originType:
+                    point.userCreated &&
+                    point.userCreated.created
+                      ? "user-created"
+                      : (
+                          point.userEdit &&
+                          point.userEdit.modified
+                            ? "user-edited"
+                            : "ai"
+                        ),
+
+                  originText:
+                    point.userCreated &&
+                    point.userCreated.created
+                      ? "用户新增"
+                      : (
+                          point.userEdit &&
+                          point.userEdit.modified
+                            ? "用户已修改"
+                            : "AI 整理"
+                        ),
+
+                  sourceIds:
+                    Array.isArray(
+                      point.sourceIds
+                    )
+                      ? point.sourceIds
+                      : [],
+
+                  source:
+                    Array.isArray(
+                      point.sourceIds
+                    )
+                      ? point.sourceIds.join(
+                          "、"
+                        )
+                      : "",
+
+                  review: false
+                })
+              )
+          })
+        );
+
+      this.setData({
+        mode: "local",
+        entityType: "txt",
+        materialId: materialId,
+        isLocalAi: true,
+
+        title: material.fileName,
+
+        subtitle:
+          "AI 自动整理 · TXT 资料",
+
+        aiOutdated: false,
+
+        groups: groups,
+
+        sources:
+          Array.isArray(
+            aiAnalysis.sources
+          )
+            ? aiAnalysis.sources
+            : []
+      });
+
+      this.hasLoadedLocalOutline = true;
+
+    } catch (error) {
+      console.error(
+        "读取 TXT AI 大纲失败：",
+        error
+      );
+
+      wx.showModal({
+        title: "无法打开 AI 大纲",
+        content: error.message,
+        showCancel: false,
+
+        success: () => {
+          wx.navigateBack();
+        }
+      });
+    }
+  },
+
   toggleGroup(event) {
     const id =
       event.currentTarget.dataset.id;
@@ -340,6 +506,48 @@ Page({
       event.currentTarget.dataset.title;
 
     if (this.data.isLocalAi) {
+      if (this.data.entityType === "txt") {
+        const materialId =
+          this.data.materialId;
+
+        if (!materialId || !id) {
+          wx.showModal({
+            title: "无法打开知识点",
+            content:
+              "缺少资料或知识点编号。",
+            showCancel: false
+          });
+          return;
+        }
+
+        wx.navigateTo({
+          url:
+            "/pages/knowledge/knowledge" +
+            "?mode=local" +
+            "&type=txt" +
+            "&materialId=" +
+            encodeURIComponent(materialId) +
+            "&pointId=" +
+            encodeURIComponent(id),
+
+          fail: (error) => {
+            console.error(
+              "打开 TXT 知识点详情失败：",
+              error
+            );
+
+            wx.showModal({
+              title: "打开失败",
+              content:
+                "无法打开知识点详情页。",
+              showCancel: false
+            });
+          }
+        });
+
+        return;
+      }
+
       const noteId =
         this.data.noteId;
 
@@ -429,13 +637,13 @@ Page({
           )
       );
 
-    const sourceText =
+      const sourceText =
       matchedSources.length > 0
         ? matchedSources
             .map(
               source =>
                 `[${source.id}]\n` +
-                source.content
+                (source.text || source.content || "")
             )
             .join("\n\n")
         : "没有找到可核对的原文段落。";
@@ -467,15 +675,15 @@ Page({
     }
 
     const text =
-      this.data.sources.length > 0
-        ? this.data.sources
-            .map(
-              source =>
-                `[${source.id}]\n` +
-                source.content
-            )
-            .join("\n\n")
-        : "没有可显示的原文段落。";
+    this.data.sources.length > 0
+      ? this.data.sources
+          .map(
+            source =>
+              `[${source.id}]\n` +
+              (source.text || source.content || "")
+          )
+          .join("\n\n")
+      : "没有可显示的原文段落。";
 
     wx.showModal({
       title: "本次整理的原文段落",
@@ -524,15 +732,25 @@ Page({
         }
 
         try {
-          localNotes.addAiCategory(
-            this.data.noteId,
-            name
-          );
+          if (this.data.entityType === "txt") {
+            localMaterials.addMaterialCategory(
+              this.data.materialId,
+              name
+            );
 
-          // 创建成功后立即重新读取。
-          this.loadLocalAiOutline(
-            this.data.noteId
-          );
+            this.loadLocalAiOutlineForTxt(
+              this.data.materialId
+            );
+          } else {
+            localNotes.addAiCategory(
+              this.data.noteId,
+              name
+            );
+
+            this.loadLocalAiOutline(
+              this.data.noteId
+            );
+          }
 
           wx.showToast({
             title: "分类已创建",

@@ -172,6 +172,20 @@ Page({
     });
   },
 
+  onOpenMaterialOutline(event) {
+    const id = event.currentTarget.dataset.id;
+    if (!id) return;
+
+    wx.navigateTo({
+      url:
+        "/pages/outline/outline" +
+        "?mode=local" +
+        "&type=txt" +
+        "&materialId=" +
+        encodeURIComponent(id)
+    });
+  },
+
   onDeleteLocalMaterial(event) {
     const id =
       event.currentTarget.dataset.id;

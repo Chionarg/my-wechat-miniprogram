@@ -604,9 +604,360 @@ function deleteMaterial(id) {
   );
 }
 
+function findKnowledgePointById(material, pointId) {
+  if (
+    !material.aiAnalysis ||
+    !material.aiAnalysis.data ||
+    !Array.isArray(material.aiAnalysis.data.categories)
+  ) {
+    return null;
+  }
+
+  for (let cIdx = 0; cIdx < material.aiAnalysis.data.categories.length; cIdx++) {
+    const category = material.aiAnalysis.data.categories[cIdx];
+    const points = Array.isArray(category.knowledgePoints) ? category.knowledgePoints : [];
+    for (let pIdx = 0; pIdx < points.length; pIdx++) {
+      const pid = points[pIdx].id || ("kp_" + cIdx + "_" + pIdx);
+      if (pid === pointId) {
+        if (!points[pIdx].id) {
+          points[pIdx].id = pid;
+        }
+        return {
+          categoryIndex: cIdx,
+          pointIndex: pIdx,
+          category: category,
+          point: points[pIdx]
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function updateMaterialKnowledgePointById(
+  materialId,
+  pointId,
+  changes
+) {
+  if (
+    typeof materialId !== "string" ||
+    !materialId ||
+    typeof pointId !== "string" ||
+    !pointId
+  ) {
+    throw new Error(
+      "缺少有效的资料或知识点编号"
+    );
+  }
+
+  const title =
+    typeof changes.title === "string"
+      ? changes.title.trim()
+      : "";
+
+  const summary =
+    typeof changes.summary === "string"
+      ? changes.summary.trim()
+      : "";
+
+  if (!title || !summary) {
+    throw new Error(
+      "知识点名称和解释不能为空"
+    );
+  }
+
+  if (
+    title.length > 100 ||
+    summary.length > 1000
+  ) {
+    throw new Error(
+      "知识点名称或解释超过长度限制"
+    );
+  }
+
+  const materials = readMaterials();
+
+  const material =
+    materials.find(
+      item => item.id === materialId
+    );
+
+  if (!material) {
+    throw new Error(
+      "没有找到对应资料"
+    );
+  }
+
+  const found =
+    findKnowledgePointById(
+      material,
+      pointId
+    );
+
+  if (!found) {
+    throw new Error(
+      "没有找到对应知识点"
+    );
+  }
+
+  const point = found.point;
+
+  const original =
+    point.userEdit &&
+    point.userEdit.original
+      ? point.userEdit.original
+      : {
+          title: point.title,
+          summary: point.summary
+        };
+
+  point.title = title;
+  point.summary = summary;
+
+  point.userEdit = {
+    modified: true,
+    modifiedAt: Date.now(),
+    original: original
+  };
+
+  material.updatedAt = Date.now();
+
+  writeMaterials(materials);
+
+  return {
+    id: point.id,
+    title: point.title,
+    summary: point.summary,
+    sourceIds:
+      Array.isArray(point.sourceIds)
+        ? point.sourceIds
+        : [],
+    userEdit: point.userEdit
+  };
+}
+
+function moveMaterialKnowledgePointById(
+  materialId,
+  pointId,
+  targetCategoryName
+) {
+  if (
+    typeof materialId !== "string" ||
+    !materialId ||
+    typeof pointId !== "string" ||
+    !pointId ||
+    typeof targetCategoryName !== "string" ||
+    !targetCategoryName.trim()
+  ) {
+    throw new Error(
+      "移动知识点所需参数不完整"
+    );
+  }
+
+  const name = targetCategoryName.trim();
+  const materials = readMaterials();
+
+  const material =
+    materials.find(
+      item => item.id === materialId
+    );
+
+  if (!material) {
+    throw new Error(
+      "没有找到对应资料"
+    );
+  }
+
+  const found =
+    findKnowledgePointById(
+      material,
+      pointId
+    );
+
+  if (!found) {
+    throw new Error(
+      "没有找到对应知识点"
+    );
+  }
+
+  const categories =
+    material.aiAnalysis.data.categories;
+
+  const targetCategory =
+    categories.find(c => c.name === name);
+
+  if (!targetCategory) {
+    throw new Error("目标分类不存在");
+  }
+
+  if (found.category.name === name) {
+    return {
+      moved: false,
+      categoryName: name
+    };
+  }
+
+  found.category.knowledgePoints.splice(
+    found.pointIndex,
+    1
+  );
+
+  if (!Array.isArray(targetCategory.knowledgePoints)) {
+    targetCategory.knowledgePoints = [];
+  }
+
+  targetCategory.knowledgePoints.push(
+    found.point
+  );
+
+  material.updatedAt = Date.now();
+
+  writeMaterials(materials);
+
+  return {
+    moved: true,
+    categoryName: name
+  };
+}
+
+function deleteMaterialKnowledgePointById(
+  materialId,
+  pointId
+) {
+  if (
+    typeof materialId !== "string" ||
+    !materialId ||
+    typeof pointId !== "string" ||
+    !pointId
+  ) {
+    throw new Error(
+      "缺少有效的资料或知识点编号"
+    );
+  }
+
+  const materials = readMaterials();
+
+  const material =
+    materials.find(
+      item => item.id === materialId
+    );
+
+  if (!material) {
+    throw new Error(
+      "没有找到对应资料"
+    );
+  }
+
+  const found =
+    findKnowledgePointById(
+      material,
+      pointId
+    );
+
+  if (!found) {
+    throw new Error(
+      "没有找到对应知识点"
+    );
+  }
+
+  found.category.knowledgePoints.splice(
+    found.pointIndex,
+    1
+  );
+
+  material.updatedAt = Date.now();
+
+  writeMaterials(materials);
+
+  return { success: true };
+}
+
+function addMaterialCategory(
+  materialId,
+  categoryName
+) {
+  if (
+    typeof materialId !== "string" ||
+    !materialId
+  ) {
+    throw new Error(
+      "缺少有效的资料编号"
+    );
+  }
+
+  const name =
+    typeof categoryName === "string"
+      ? categoryName.trim()
+      : "";
+
+  if (!name) {
+    throw new Error(
+      "分类名称不能为空"
+    );
+  }
+
+  if (name.length > 50) {
+    throw new Error(
+      "分类名称超过长度限制"
+    );
+  }
+
+  const materials = readMaterials();
+
+  const material =
+    materials.find(
+      item => item.id === materialId
+    );
+
+  if (
+    !material ||
+    !material.aiAnalysis ||
+    !material.aiAnalysis.data
+  ) {
+    throw new Error(
+      "没有找到对应资料或 AI 整理结果"
+    );
+  }
+
+  if (
+    !Array.isArray(
+      material.aiAnalysis.data.categories
+    )
+  ) {
+    material.aiAnalysis.data.categories = [];
+  }
+
+  const exists =
+    material.aiAnalysis.data.categories.some(
+      c => c.name === name
+    );
+
+  if (exists) {
+    throw new Error(
+      "分类名称已存在"
+    );
+  }
+
+  material.aiAnalysis.data.categories.push({
+    name: name,
+    knowledgePoints: []
+  });
+
+  material.updatedAt = Date.now();
+
+  writeMaterials(materials);
+
+  return { success: true, name: name };
+}
+
 module.exports = {
   readMaterials,
   saveTxtMaterial,
   saveMaterialAiAnalysis,
-  deleteMaterial
+  deleteMaterial,
+  updateMaterialKnowledgePointById,
+  moveMaterialKnowledgePointById,
+  deleteMaterialKnowledgePointById,
+  addMaterialCategory
 };

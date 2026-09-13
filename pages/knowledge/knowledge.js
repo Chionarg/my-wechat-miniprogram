@@ -1,11 +1,16 @@
 const localNotes =
   require("../../utils/local-notes");
+const localNotes =
+  require("../../utils/local-notes");
+const localMaterials =
+  require("../../utils/local-materials");
 
 Page({
   data: {
     mode: "demo",
-
+    entityType: "note",
     noteId: "",
+    materialId: "",
     pointId: "",
 
     originType: "",
@@ -36,14 +41,18 @@ Page({
   onLoad(options) {
     if (
       options.mode === "local" &&
+      options.type === "txt" &&
+      options.materialId &&
+      options.pointId
+    ) {
+      return;
+    }
+
+    if (
+      options.mode === "local" &&
       options.noteId &&
       options.pointId
     ) {
-      this.loadLocalPoint(
-        options.noteId,
-        options.pointId
-      );
-
       return;
     }
 
@@ -52,6 +61,7 @@ Page({
       return;
     }
 
+    console.warn("【未命中任何可用分支】", options);
     this.setData({
       available: false
     });
@@ -221,6 +231,170 @@ note.aiAnalysis.data.categories
     }
   },
 
+  loadLocalPointForTxt(materialId, pointId) {
+    try {
+      const materials =
+        localMaterials.readMaterials();
+
+      const material = materials.find(
+        item => item.id === materialId
+      );
+
+      if (!material) {
+        throw new Error(
+          "没有找到对应的 TXT 资料"
+        );
+      }
+
+      if (
+        !material.aiAnalysis ||
+        !material.aiAnalysis.data ||
+        !Array.isArray(
+          material.aiAnalysis.data.categories
+        )
+      ) {
+        throw new Error(
+          "没有找到可用的 AI 整理结果"
+        );
+      }
+
+      let targetPoint = null;
+      let targetCategory = "";
+
+      material.aiAnalysis.data.categories
+      .forEach((category, cIdx) => {
+        const points =
+          Array.isArray(
+            category.knowledgePoints
+          )
+            ? category.knowledgePoints
+            : [];
+
+        points.forEach((point, pIdx) => {
+          const pid = point.id || ("kp_" + cIdx + "_" + pIdx);
+          if (pid === pointId) {
+            if (!point.id) {
+              point.id = pid;
+            }
+            targetPoint = point;
+            targetCategory = category.name;
+          }
+        });
+      });
+
+      if (!targetPoint) {
+        throw new Error(
+          "没有找到对应的知识点"
+        );
+      }
+
+      const sourceIds =
+        Array.isArray(
+          targetPoint.sourceIds
+        )
+          ? targetPoint.sourceIds
+          : [];
+
+      const rawSources =
+        Array.isArray(
+          material.aiAnalysis.sources
+        )
+          ? material.aiAnalysis.sources
+          : [];
+
+      const matchedSources = rawSources
+        .filter(
+          source =>
+            sourceIds.includes(
+              source.id
+            )
+        )
+        .map(source => ({
+          ...source,
+          content:
+            source.text ||
+            source.content ||
+            ""
+        }));
+      this.setData({
+        mode: "local",
+        entityType: "txt",
+
+        materialId: materialId,
+        pointId: pointId,
+
+        available: true,
+        isLocalAi: true,
+
+        userModified:
+          Boolean(
+            targetPoint.userEdit &&
+            targetPoint.userEdit.modified
+          ),
+
+        aiOutdated: false,
+
+        point: {
+          title: targetPoint.title,
+          category: targetCategory,
+          summary:
+            targetPoint.summary || "",
+          explanation:
+            targetPoint.summary || "",
+          sourceIds: sourceIds
+        },
+
+        originType:
+          targetPoint.userCreated &&
+          targetPoint.userCreated.created
+            ? "user-created"
+            : (
+                targetPoint.userEdit &&
+                targetPoint.userEdit.modified
+                  ? "user-edited"
+                  : "ai"
+              ),
+
+        originText:
+          targetPoint.userCreated &&
+          targetPoint.userCreated.created
+            ? "用户新增"
+            : (
+                targetPoint.userEdit &&
+                targetPoint.userEdit.modified
+                  ? "用户已修改"
+                  : "AI 整理"
+              ),
+
+        categories:
+          material.aiAnalysis.data
+            .categories
+            .map(
+              category =>
+                category.name
+            ),
+
+        matchedSources:
+          matchedSources
+      });
+    } catch (error) {
+      console.error(
+        "读取 TXT AI 知识点失败：",
+        error
+      );
+
+      wx.showModal({
+        title: "无法打开知识点",
+        content: error.message,
+        showCancel: false,
+
+        success: () => {
+          wx.navigateBack();
+        }
+      });
+    }
+  },
+
   onMoveCategory() {
     if (
       !this.data.isLocalAi ||
@@ -263,29 +437,38 @@ note.aiAnalysis.data.categories
             result.tapIndex
           ];
 
-        try {
-          const moveResult =
-            localNotes
-              .moveAiKnowledgePointById(
-                this.data.noteId,
-                this.data.pointId,
-                targetName
-              );
-
-          this.setData({
-            "point.category":
-              moveResult
-                .categoryName
-          });
-
-          wx.showToast({
-            title:
-              moveResult.moved
-                ? "分类已调整"
-                : "分类未变化",
-            icon: "none"
-          });
-        } catch (error) {
+          try {
+            let moveResult;
+  
+            if (this.data.entityType === "txt") {
+              moveResult =
+                localMaterials.moveMaterialKnowledgePointById(
+                  this.data.materialId,
+                  this.data.pointId,
+                  targetName
+                );
+            } else {
+              moveResult =
+                localNotes.moveAiKnowledgePointById(
+                  this.data.noteId,
+                  this.data.pointId,
+                  targetName
+                );
+            }
+  
+            this.setData({
+              "point.category":
+                moveResult.categoryName
+            });
+  
+            wx.showToast({
+              title:
+                moveResult.moved
+                  ? "分类已调整"
+                  : "分类未变化",
+              icon: "none"
+            });
+          } catch (error) {
           console.error(
             "调整知识点分类失败：",
             error
@@ -381,19 +564,23 @@ note.aiAnalysis.data.categories
         }
 
         try {
-          localNotes
-            .deleteAiKnowledgePointById(
+          if (this.data.entityType === "txt") {
+            localMaterials.deleteMaterialKnowledgePointById(
+              this.data.materialId,
+              this.data.pointId
+            );
+          } else {
+            localNotes.deleteAiKnowledgePointById(
               this.data.noteId,
               this.data.pointId
             );
+          }
 
           wx.showToast({
             title: "知识点已删除",
             icon: "success"
           });
 
-          // 返回之前的大纲页面。
-          // outline 的 onShow 会重新读取本地数据。
           setTimeout(() => {
             wx.navigateBack();
           }, 400);
@@ -498,15 +685,29 @@ note.aiAnalysis.data.categories
     }
 
     try {
-      const updated =
-      localNotes.updateAiKnowledgePointById(
-        this.data.noteId,
-        this.data.pointId,
-        {
-          title: title,
-          summary: summary
-        }
-      );
+      let updated;
+
+      if (this.data.entityType === "txt") {
+        updated =
+          localMaterials.updateMaterialKnowledgePointById(
+            this.data.materialId,
+            this.data.pointId,
+            {
+              title: title,
+              summary: summary
+            }
+          );
+      } else {
+        updated =
+          localNotes.updateAiKnowledgePointById(
+            this.data.noteId,
+            this.data.pointId,
+            {
+              title: title,
+              summary: summary
+            }
+          );
+      }
 
       this.setData({
         "point.title":
@@ -518,13 +719,13 @@ note.aiAnalysis.data.categories
         "point.explanation":
           updated.summary,
 
-          userModified: true,
-          originType: "user-edited",
-          originText: "用户已修改",
+        userModified: true,
+        originType: "user-edited",
+        originText: "用户已修改",
 
-          editing: false,
-          draftTitle: "",
-          draftSummary: ""
+        editing: false,
+        draftTitle: "",
+        draftSummary: ""
       });
 
       wx.showToast({
